@@ -38,15 +38,7 @@ class HadoopAppAttempt
       @AppStates[data["@timestamp"]] = HadoopStateChange.new(data["@timestamp"], data["PreviousState"], data["State"])
     elsif data.has_key? "Event"
       @Events[data["@timestamp"]]= HadoopEvent.new data["@timestamp"], data["Event"]
-    # elsif data["message"].include?("Accepted application")
-    #   @acceptedAt = data["@timestamp"]
-    #   @username = data["UserName"]
-    # elsif data["message"].include?("unregistered successfully.")
-    #   @unregisteredAt = data["@timestamp"]
-    # elsif data["message"].include?("Stopping application")
-    #   @stoppingAt = data["@timestamp"]
-    # elsif data["message"].include?("Application just finished ")
-    #   @endTime = data["@timestamp"]
+
     elsif data["message"].include?("is done.")
       getSummary data
 

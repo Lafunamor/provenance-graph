@@ -25,15 +25,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
   public
   def receive(event)
-    #@codec.decode(event)
 
-    #path = event.sprintf(@path)
-    #fd = open(path)
-    #csv_values = @fields.map {|name| get_value(name, event)}
-    #fd.write(csv_values.to_csv(@csv_options))
-
-    #flush(fd)
-    #close_stale_files
     data = event.to_hash
 
     # handle job related messages
