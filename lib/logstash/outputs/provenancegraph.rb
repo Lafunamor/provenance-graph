@@ -34,24 +34,25 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
     if data.has_key? ("ContainerID")
       ids = data["ContainerID"].split('_')
-      jobID = ids[1]
-      appID = ids[1] +'_'+ ids[2]
-      appAttemptID = ids[1] +'_'+ ids[2] +'_'+ ids[3]
+      jobID = ids[1]+'_'+ ids[2]
+      appID = ids[1]+'_'+ ids[2]
+      appAttemptID = ids[1] +'_'+ ids[2] +'_0000'+ ids[3] #containerIDs do not use the same length for the app attempt id
       containerID = ids[1] +'_'+ ids[2] +'_'+ ids[3] +'_'+ ids[4]
       type = "container"
     elsif data.has_key? ("AppAttemptID")
       ids = data["AppAttemptID"].split('_')
-      jobID = ids[1]
-      appID = ids[1] +'_'+ ids[2]
+      jobID = ids[1]+'_'+ ids[2]
+      appID = ids[1]+'_'+ ids[2]
       appAttemptID = ids[1] +'_'+ ids[2] +'_'+ ids[3]
       type = "attempt"
     elsif data.has_key?("ApplicationID")
       ids = data["ApplicationID"].split('_')
-      jobID = ids[1]
-      appID = ids[1] +'_'+ ids[2]
+      jobID = ids[1]+'_'+ ids[2]
+      appID = ids[1]+'_'+ ids[2]
       type = "app"
     elsif data.has_key? ("JobID")
-      jobID = data["JobID"].split('_')[1]
+      ids = data["JobID"].split('_')
+      jobID = jobID = ids[1]+'_'+ ids[2]
       type = "job"
     end
     if type.nil?
@@ -88,6 +89,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
     #if data["message"].include?("JobSummary")
       open(path + 'jobs.txt', 'a') { |f|
+        f.puts "**************************************************"
         f.puts @Jobs
       }
     #end

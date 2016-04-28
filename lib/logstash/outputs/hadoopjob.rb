@@ -67,8 +67,8 @@ class HadoopJob
     if data.has_key? "queue"
       @queue = data["queue"]
     end
-    if data.has_key? "jobStatus"
-      @jobStatus = data["jobStatus"]
+    if data.has_key? "JobStatus"
+      @jobStatus = data["JobStatus"]
     end
     if data.has_key? "mapSlotSeconds"
       @mapSlotSeconds = data["mapSlotSeconds"]
