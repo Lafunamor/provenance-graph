@@ -20,24 +20,27 @@ class HadoopApplication
   @startTime
   @finishTime
   @finalState
+  @masterContainer
 
-  # Hash of containers of this application
-  @Containers
+
   # HashMap of state changes
   @AppStates
   # HashMap of Events
   @Events
+  # Hash of AppAttempts
+  @AppAttempts
 
   def initialize(id)
     @ID = id;
     @created = Time.now
-    @Containers = Hash.new
     @AppStates = Hash.new
     @Events = Hash.new
+    @AppAttempts = Hash.new
   end
 
-  def addContainer(containerID, container)
-    @Containers[containerID] = container
+
+  def addAttempt(attemptID, attempt)
+    @AppAttempts[attemptID]= attempt
   end
 
   def parseData (data)
@@ -59,45 +62,45 @@ class HadoopApplication
 
 
     else
-      open('/home/cloudera/share/provenance-graph/output/ApplicationID.txt', 'a') { |f|
-        f.puts data
-      }
+      return false
 
     end
+    return true
   end
 
   def getSummary data
 
-    if data.has_key? "State" && @appState.nil?
+    if data.has_key? "State"
       @appState = data["State"]
     end
-    if data.has_key? "UserName" && @username.nil?
+    if data.has_key? "UserName"
       @username= data["UserName"]
     end
-    if data.has_key? "Name" && @appName.nil?
+    if data.has_key? "Name"
       @appName = data["Name"]
     end
-    if data.has_key? "queue" && @queue.nil?
+    if data.has_key? "queue"
       @queue = data["queue"]
     end
-    if data.has_key? "finishTime" && @finishTime.nil?
+    if data.has_key? "finishTime"
       @finishTime = data["finishTime"]
     end
-    if data.has_key? "TrackingURL" && @trackingURL.nil?
+    if data.has_key? "TrackingURL"
       @trackingURL = data["TrackingURL"]
     end
-    if data.has_key? "port" && @port.nil?
+    if data.has_key? "port"
       @port = data["port"]
     end
-    if data.has_key? "AppMasterHost" && @appMasterHost.nil?
+    if data.has_key? "AppMasterHost"
       @appMasterHost = data["AppMasterHost"]
     end
-    if data.has_key? "StartTime" && @startTime.nil?
+    if data.has_key? "StartTime"
       @startTime = data["StartTime"]
     end
-    if data.has_key? "FinalStatus" && @finalState.nil?
+    if data.has_key? "FinalStatus"
       @finalState = data["FinalStatus"]
     end
+
   end
 
 

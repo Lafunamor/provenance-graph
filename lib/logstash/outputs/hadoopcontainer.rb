@@ -11,6 +11,11 @@ class HadoopContainer
   @succeededAt # Time at which the container succeeded
   @cleanUpTime
   @host
+  @addedToAppAt
+  @removedFromApp
+  @stoppedAt
+  @startedAt
+  @arguments
 
 
   # State changes if the container
@@ -59,14 +64,20 @@ class HadoopContainer
       @capacity = data["capacity"]
     # elsif data["message"].include?("Start request")
     #   getSummary data
-
-
+    elsif data["message"].include?("Adding container")
+      @addedToAppAt = data["@timestamp"]
+    elsif data["message"].include?("Removing container")
+      @removedFromApp = data["@timestamp"]
+    elsif data["message"].include?("Stopping container with container Id")
+      @stoppedAt = data["@timestamp"]
+    elsif data.has_key? "Arguments"
+      @startedAt = data["@timestamp"]
+      @arguments = data["Arguments"]
     else
-      open('/home/cloudera/share/provenance-graph/output/ContainerID.txt', 'a') { |f|
-        f.puts data
-      }
+      return false
 
     end
+    return true
   end
 
 end

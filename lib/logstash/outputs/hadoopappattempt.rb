@@ -41,20 +41,38 @@ class HadoopAppAttempt
 
     elsif data["message"].include?("is done.")
       getSummary data
-
+    elsif data["message"].include?("Storing attempt")
+      getSummary data
 
     else
-      open('/home/cloudera/share/provenance-graph/output/AppAttemptID2.txt', 'a') { |f|
-        f.puts data
-      }
+      return false
 
     end
+    return true
   end
 
   def getSummary data
-    if data.has_key? "FinalState" && @finalState.nil?
+    if data.has_key? "FinalState"
       @finalState = data["FinalState"]
       @endTime = data["@timestamp"]
+    end
+    if data.has_key? "MasterContainerID"
+      @masterContainer = data["MasterContainerID"]
+    end
+    if data.has_key? "Node"
+      @node = data["Node"]
+    end
+    if data.has_key? "NodeHTTPAddress"
+      @nodeHTTPAdr = data["NodeHTTPAddress"]
+    end
+    if data.has_key? "resource"
+      @resource = data["resource"]
+    end
+    if data.has_key? "Priority"
+      @priority = data["Priority"]
+    end
+    if data.has_key? "Token"
+      @token = data["Token"]
     end
   end
 
