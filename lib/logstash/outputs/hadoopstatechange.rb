@@ -1,15 +1,15 @@
 
 class HadoopStateChange
 
-  @timestamp
-  @previousState
-  @newState
+  # @timestamp
+  # @previousState
+  # @newState
 
 
-  def initialize(time, prevState, newState)
+  def initialize(time, prev_state, new_state)
     @timestamp = time
-    @previousState = prevState
-    @newState = newState
+    @previous_state = prev_state
+    @new_state = new_state
   end
 
 

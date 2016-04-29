@@ -3,46 +3,46 @@ require_relative 'hadoopevent'
 
 class HadoopAppAttempt
 
-  @created
-  @ID
-
-  @queue
-  @username
-  @unregisteredAt #unregistered at resourcemanager
-  @acceptedAt #accepted at scheduler
-  @stoppingAt
-  @endTime
-  @finalState
-
-  # Hash of containers of this application
-  @Containers
-  # HashMap of state changes
-  @AppStates
-  # HashMap of Events
-  @Events
+  # @created
+  # @ID
+  #
+  # @queue
+  # @username
+  # @unregisteredAt #unregistered at resourcemanager
+  # @acceptedAt #accepted at scheduler
+  # @stoppingAt
+  # @endTime
+  # @finalState
+  #
+  # # Hash of containers of this application
+  # @Containers
+  # # HashMap of state changes
+  # @AppStates
+  # # HashMap of Events
+  # @Events
 
   def initialize(id)
-    @ID = id;
+    @id = id
     @created = Time.now
-    @Containers = Hash.new
-    @AppStates = Hash.new
-    @Events = Hash.new
+    @containers = Hash.new
+    @app_states = Hash.new
+    @events = Hash.new
   end
 
-  def addContainer(containerID, container)
-    @Containers[containerID] = container
+  def add_container(container_id, container)
+    @containers[container_id] = container
   end
 
-  def parseData (data)
-    if data.has_key? "PreviousState"
-      @AppStates[data["@timestamp"]] = HadoopStateChange.new(data["@timestamp"], data["PreviousState"], data["State"])
-    elsif data.has_key? "Event"
-      @Events[data["@timestamp"]]= HadoopEvent.new data["@timestamp"], data["Event"]
+  def parse_data (data)
+    if data.has_key? 'PreviousState'
+      @app_states[data['@timestamp']] = HadoopStateChange.new(data['@timestamp'], data['PreviousState'], data['State'])
+    elsif data.has_key? 'Event'
+      @events[data['@timestamp']]= HadoopEvent.new data['@timestamp'], data['Event']
 
-    elsif data["message"].include?("is done.")
-      getSummary data
-    elsif data["message"].include?("Storing attempt")
-      getSummary data
+    elsif data['message'].include?('is done.')
+      get_summary data
+    elsif data['message'].include?('Storing attempt')
+      get_summary data
 
     else
       return false
@@ -51,28 +51,28 @@ class HadoopAppAttempt
     return true
   end
 
-  def getSummary data
-    if data.has_key? "FinalState"
-      @finalState = data["FinalState"]
-      @endTime = data["@timestamp"]
+  def get_summary(data)
+    if data.has_key? 'FinalState'
+      @final_state = data['FinalState']
+      @end_time = data['@timestamp']
     end
-    if data.has_key? "MasterContainerID"
-      @masterContainer = data["MasterContainerID"]
+    if data.has_key? 'MasterContainerID'
+      @master_container = data['MasterContainerID']
     end
-    if data.has_key? "Node"
-      @node = data["Node"]
+    if data.has_key? 'Node'
+      @node = data['Node']
     end
-    if data.has_key? "NodeHTTPAddress"
-      @nodeHTTPAdr = data["NodeHTTPAddress"]
+    if data.has_key? 'NodeHTTPAddress'
+      @node_http_adr = data['NodeHTTPAddress']
     end
-    if data.has_key? "resource"
-      @resource = data["resource"]
+    if data.has_key? 'resource'
+      @resource = data['resource']
     end
-    if data.has_key? "Priority"
-      @priority = data["Priority"]
+    if data.has_key? 'Priority'
+      @priority = data['Priority']
     end
-    if data.has_key? "Token"
-      @token = data["Token"]
+    if data.has_key? 'Token'
+      @token = data['Token']
     end
   end
 

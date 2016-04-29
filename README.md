@@ -78,6 +78,25 @@ bin/plugin install /your/local/plugin/logstash-filter-awesome.gem
 ```
 - Start Logstash and proceed to test the plugin
 
+## Configuration
+To use this output plugin you need to change the configuration of logstash.
+Here is an example configuration:
+```
+output{
+   provenancegraph {
+       path => "/home/cloudera/share/provenance-graph/output/"
+   }
+}
+```
+
+### Parameters
+currently these parameters are supported:
+```
+path => "path for the file output"
+```
+Currently the path variable must end with a '/'
+
+
 ## Contributing
 
 All contributions are welcome: ideas, patches, documentation, bug reports, complaints, and even something you drew up on a napkin.
