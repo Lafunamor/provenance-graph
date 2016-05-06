@@ -45,18 +45,18 @@ class HadoopApplication
 
   def parse_data (data)
     if data.has_key? 'AppPreviousState'
-      @app_states[data['@timestamp']] = HadoopStateChange.new(data['@timestamp'], data['AppPreviousState'], data['AppState'])
+      @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['AppPreviousState'], data['AppState'])
     elsif data.has_key? 'Event'
-      @events[data['@timestamp']]= HadoopEvent.new data['@timestamp'], data['Event']
+      @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
     elsif data['message'].include?('Accepted application')
-      @accepted_at = data['@timestamp']
+      @accepted_at = data['timestamp']
       @username = data['UserName']
     elsif data['message'].include?('unregistered successfully.')
-      @unregistered_at = data['@timestamp']
+      @unregistered_at = data['timestamp']
     elsif data['message'].include?('Stopping application')
-      @stopping_at = data['@timestamp']
+      @stopping_at = data['timestamp']
     elsif data['message'].include?('Application just finished ')
-      @end_time = data['@timestamp']
+      @end_time = data['timestamp']
     elsif data['message'].include?('ApplicationSummary')
       get_summary data
 

@@ -35,9 +35,9 @@ class HadoopAppAttempt
 
   def parse_data (data)
     if data.has_key? 'PreviousState'
-      @app_states[data['@timestamp']] = HadoopStateChange.new(data['@timestamp'], data['PreviousState'], data['State'])
+      @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
     elsif data.has_key? 'Event'
-      @events[data['@timestamp']]= HadoopEvent.new data['@timestamp'], data['Event']
+      @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
 
     elsif data['message'].include?('is done.')
       get_summary data
@@ -54,7 +54,7 @@ class HadoopAppAttempt
   def get_summary(data)
     if data.has_key? 'FinalState'
       @final_state = data['FinalState']
-      @end_time = data['@timestamp']
+      @end_time = data['timestamp']
     end
     if data.has_key? 'MasterContainerID'
       @master_container = data['MasterContainerID']
