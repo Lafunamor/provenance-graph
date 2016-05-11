@@ -1,10 +1,13 @@
 # encoding: utf-8
 require 'logstash/outputs/base'
 require 'logstash/namespace'
-require_relative 'hadoopjob'
-require_relative 'hadoopapplication'
-require_relative 'hadoopcontainer'
-require_relative 'hadoopappattempt'
+require_relative 'hadoop_job'
+require_relative 'hadoop_application'
+require_relative 'hadoop_container'
+require_relative 'hadoop_app_attempt'
+require_relative 'hadoop_hdfs_block'
+require 'rubygems'
+require 'json'
 
 # An example output that does nothing.
 class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
@@ -22,6 +25,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @applications = Hash.new
     @app_attempts = Hash.new
     @containers = Hash.new
+    @blocks = Hash.new
   end
 
   # def register
@@ -54,6 +58,9 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       ids = data['JobID'].split('_')
       job_id = job_id = ids[1]+'_'+ ids[2]
       type = 'job'
+    elsif data.has_key?('Block_ID')
+      block_id = data["Block_ID"]
+      type = 'hdfs'
     end
     if type.nil?
       return
@@ -85,21 +92,38 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         unless container.parse_data data
           unhandled data
         end
+      when 'hdfs'
+        block = get_create_block block_id
+        unless block.parse_data data
+          unhandled data
+        end
       else
         unhandled data
         return
     end
 
-    open(path + 'file.txt', 'a') { |f|
-      f.puts data
-    }
+    # open(path + 'file.txt', 'a') { |f|
+    #   f.puts data
+    # }
 
-    #if data["message"].include?("JobSummary")
-    open(path + 'jobs.txt', 'a') { |f|
-      f.puts '**************************************************'
+    # if data["message"].include?("JobSummary")
+    open(path + 'jobs.txt', 'w') { |f|
+      # @jobs.each {|j|
+      #   f.puts j}
+      # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
+      # f.puts '**************************************************'
       f.puts @jobs
     }
+    open(path + 'hdfs.txt', 'w') { |f|
+      # @blocks.each {|j|
+      #   f.puts j}
+      # f.puts JSON.pretty_generate(@blocks, :object_nl => '\n')
+      # f.puts '**************************************************'
+      f.puts @blocks
+    }
     #end
+    # File.write(path + 'jobs.txt', @jobs)
+    # File.write(path + 'hdfs.txt', @blocks)
 
     #File.write('/home/cloudera/file.txt', event.to_hash)
 
@@ -152,6 +176,15 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       get_create_attempt(app_attempt_id, app_id, job_id).add_container container_id, container
     end
     return container
+  end
+  def get_create_block(block_id)
+    if @blocks.has_key? block_id
+      block = @blocks[block_id]
+    else
+      block = HadoopHDFSBlock.new(block_id)
+      @blocks[block_id]=block
+    end
+    return block
   end
 
 

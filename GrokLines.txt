@@ -35,7 +35,7 @@ HADOOP_RM_APPOP4 INFO org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogge
 HADOOP_RM_APPOP5 INFO org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger: USER=%{WORD:UserName}#TAB#IP=%{IP:IP}#TAB#OPERATION=%{GREEDYDATA:Operation}#TAB#TARGET=%{WORD:Target}#TAB#RESULT=%{WORD:Result}#TAB#APPID=%{WORD:ApplicationID}#TAB#APPATTEMPTID=%{WORD:AppAttamptID}
 HADOOP_RM_APPOP6 INFO org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger: USER=%{WORD:UserName}#TAB#OPERATION=%{GREEDYDATA:Operation}#TAB#TARGET=%{WORD:Target}#TAB#RESULT=%{WORD:Result}#TAB#APPID=%{WORD:ApplicationID}
 HADOOP_RM_CTRANSITION INFO org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl: %{WORD:ContainerID} Container Transitioned from %{WORD:PreviousState} to %{WORD:State}
-HADOOP_RM_CLOUNCH INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler: Unknown application %{WORD:ApplicationID} launched container %{WORD:ContainerID} on node: host: %{HOSTPORT:HostName} #containers=%{WORD:NumberOfContainers} available=%{WORD:Available} used=%{WORD:Used}
+HADOOP_RM_CLOUNCH INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler: Unknown application %{WORD:ApplicationID} launched container %{WORD:ContainerID} on node: host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:Available} used=%{WORD:Used}
 HADOOP_RM_APPACCEPT INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Accepted application %{WORD:ApplicationID} from user: %{WORD:UserName}, in queue: %{WORD:queue}, currently num of applications: %{WORD:CurrentNumofApplications}
 HADOOP_RM_APPEND INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Application %{WORD:AppAttemptID} is done. finalState=%{WORD:FinalState}
 HADOOP_RM_APPATTCRELEASE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Application attempt %{WORD:AppAttemptID} released container %{WORD:ContainerID} on node: host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:AvailableContainers} used=%{WORD:used} with event: %{WORD:Event}
@@ -57,15 +57,15 @@ HADOOP_NM_CPATHDEL INFO org.apache.hadoop.yarn.server.nodemanager.DefaultContain
 HDFS_BLK_STATE \{blockUCState=%{WORD:BlockUCState}, primaryNodeIndex=%{NUMBER:primaryNodeIndex}, replicas=%{GREEDYDATA:replicas}\}
 
 HDFS_BLK_ALLOC INFO org.apache.hadoop.hdfs.StateChange: BLOCK\* allocateBlock: %{PATH:HDFSpath}. %{GREEDYDATA:namespace} %{WORD:Block_ID}%{HDFS_BLK_STATE}
-HDFS_BLKMAP_UPDATE INFO BlockStateChange: BLOCK\* addStoredBlock: blockMap updated: %{HOSTPORT:host} is added to %{WORD:Block_ID}%{HDFS_BLK_STATE} size %{NUMBER:size}
-HDFS_BLK_INVALIDATE INFO BlockStateChange: BLOCK\* InvalidateBlocks: add %{WORD:Block_ID} to %{HOSTPORT:host}
+HDFS_BLKMAP_UPDATE INFO BlockStateChange: BLOCK\* addStoredBlock: blockMap updated: %{HOSTPORT:hdfs_host} is added to %{WORD:Block_ID}%{HDFS_BLK_STATE} size %{NUMBER:size}
+HDFS_BLK_INVALIDATE INFO BlockStateChange: BLOCK\* InvalidateBlocks: add %{WORD:Block_ID} to %{HOSTPORT:hdfs_host}
 HDFS_BLK_RECEIVED INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Received %{GREEDYDATA:namespace}:%{WORD:Block_ID} src: /%{HOSTPORT:source_host} dest: /%{HOSTPORT:dest_host} of size %{NUMBER:size}
 HDFS_BLK_RECEIVING INFO org.apache.hadoop.hdfs.server.datanode.DataNode: Receiving %{GREEDYDATA:namespace}:%{WORD:Block_ID} src: /%{HOSTPORT:source_host} dest: /%{HOSTPORT:dest_host}
 HDFS_BLK_DELED INFO org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetAsyncDiskService: Deleted %{GREEDYDATA:namespace} %{WORD:Block_ID} file %{PATH:HDFSpath}
-HDFS_BLK_DEL INFO org.apache.hadoop.hdfs.StateChange: BLOCK\* InvalidateBlocks: ask %{HOSTPORT:host} to delete \[%{GREEDYDATA:Block_ID}\]
+HDFS_BLK_DEL INFO org.apache.hadoop.hdfs.StateChange: BLOCK\* InvalidateBlocks: ask %{HOSTPORT:hdfs_host} to delete \[%{GREEDYDATA:Block_ID}\]
 HDFS_BLK_DELED2 INFO org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetAsyncDiskService: Deleted %{GREEDYDATA:namespace} %{WORD:Block_ID} file %{PATH:HDFSpath}
-HDFS_BLK_DEL2 INFO BlockStateChange: BLOCK\* BlockManager: ask %{HOSTPORT:host} to delete \[%{WORD:Block_ID}\]
+HDFS_BLK_DEL2 INFO BlockStateChange: BLOCK\* BlockManager: ask %{HOSTPORT:hdfs_host} to delete \[%{WORD:Block_ID}\]
 HDFS_BLK_DEL3 INFO BlockStateChange: BLOCK\* addToInvalidates: %{WORD:Block_ID} %{GREEDYDATA:replica_hosts}
 HDFS_BLK_TRACE INFO org.apache.hadoop.hdfs.server.datanode.DataNode.clienttrace: src: %{IPORHOST:source_host}, dest: %{IPORHOST:dest_host}, op: %{WORD:operation}, blockid: %{WORD:Block_ID}, srvID: %{GREEDYDATA:srvID}, success: %{WORD:success}
 HDFS_STATE_CHANGE INFO org.apache.hadoop.hdfs.StateChange: DIR\* completeFile: %{PATH:HDFSpath} is closed by %{GREEDYDATA:client}
-HDFS_AUDIT INFO FSNames2015-10-27 11:12:39,394 INFO FSNamesystem.audit: allowed=%{WORD:allowed} ugi=%{GREEDYDATA:user_auth} ip=\/%{IPORHOST:host} cmd=%{WORD:command} src=%{GREEDYDATA:source} dst=%{GREEDYDATA:destination} perm=%{WORD:perm} proto=%{WORD:proto}
+HDFS_AUDIT INFO FSNames2015-10-27 11:12:39,394 INFO FSNamesystem.audit: allowed=%{WORD:allowed} ugi=%{GREEDYDATA:user_auth} ip=\/%{IPORHOST:hdfs_host} cmd=%{WORD:command} src=%{GREEDYDATA:source} dst=%{GREEDYDATA:destination} perm=%{WORD:perm} proto=%{WORD:proto}

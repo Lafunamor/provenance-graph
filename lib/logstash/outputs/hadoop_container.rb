@@ -1,5 +1,5 @@
 
-require_relative 'hadoopcontainerresourceusage'
+require_relative 'hadoop_container_resource_usage'
 
 class HadoopContainer
 

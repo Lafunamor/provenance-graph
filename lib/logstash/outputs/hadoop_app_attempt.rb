@@ -1,5 +1,5 @@
-require_relative 'hadoopstatechange'
-require_relative 'hadoopevent'
+require_relative 'hadoop_state_change'
+require_relative 'hadoop_event'
 
 class HadoopAppAttempt
 
