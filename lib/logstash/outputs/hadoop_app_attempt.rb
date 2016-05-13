@@ -24,13 +24,19 @@ class HadoopAppAttempt
   def initialize(id)
     @id = id
     @created = Time.now
-    @containers = Hash.new
+    # @containers = Hash.new
     @app_states = Hash.new
     @events = Hash.new
+    @containers = []
   end
 
-  def add_container(container_id, container)
-    @containers[container_id] = container
+  # def add_container(container_id, container)
+  #   @containers[container_id] = container
+  # end
+  def add_container(container_id)
+    unless @containers.include? container_id
+      @containers+=[container_id]
+    end
   end
 
   def parse_data (data)

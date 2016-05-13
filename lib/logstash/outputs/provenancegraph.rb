@@ -26,6 +26,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @app_attempts = Hash.new
     @containers = Hash.new
     @blocks = Hash.new
+    deserialize
   end
 
   # def register
@@ -126,7 +127,45 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     # File.write(path + 'hdfs.txt', @blocks)
 
     #File.write('/home/cloudera/file.txt', event.to_hash)
+    serialize
+  end
 
+  def deserialize
+    if File.file?(path + '.save_job.yaml')
+      @jobs = YAML.load(File.read(path + '.save_job.yaml'))
+    end
+    if File.file?(path + '.save_apps.yaml')
+      @applications = YAML.load(File.read(path + '.save_apps.yaml'))
+    end
+    if File.file?(path + '.save_appattempt.yaml')
+      @app_attempts = YAML.load(File.read(path + '.save_appattempt.yaml'))
+    end
+    if File.file?(path + '.save_joby.yaml')
+      @containers = YAML.load(File.read(path + '.save_containers.yaml'))
+    end
+    if File.file?(path + '.save_containers.yaml')
+      @blocks =YAML.load(File.read(path + '.save_blocks.yaml'))
+    end
+  end
+
+  def serialize
+    File.open(path + '.save_job.yaml', 'w') { |f|
+      f.write(YAML.dump(@jobs))
+    }
+    File.open(path + '.save_apps.yaml', 'w') { |f|
+      f.write(YAML.dump(@applications))
+    }
+    File.open(path + '.save_appattempt.yaml', 'w') { |f|
+      f.write(YAML.dump(@app_attempts))
+    }
+    File.open(path + '.save_containers.yaml', 'w') { |f|
+      f.write(YAML.dump(@containers))
+    }
+
+
+    File.open(path + '.save_blocks.yaml', 'w') { |f|
+      f.write(YAML.dump(@blocks))
+    }
   end
 
   def unhandled(data)
@@ -151,7 +190,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       app = HadoopApplication.new (app_id)
       @applications[app_id] = app
-      get_create_job(job_id).add_app app_id, app
+      get_create_job(job_id).add_app app_id
     end
     return app
   end
@@ -162,7 +201,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       app_attempt = HadoopAppAttempt.new (app_attempt_id)
       @app_attempts[app_attempt_id] = app_attempt
-      get_create_app(app_id, job_id).add_attempt app_attempt_id, app_attempt
+      get_create_app(app_id, job_id).add_attempt app_attempt_id
     end
     return app_attempt
   end
@@ -173,10 +212,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       container = HadoopContainer.new(container_id)
       @containers[container_id] = container
-      get_create_attempt(app_attempt_id, app_id, job_id).add_container container_id, container
+      get_create_attempt(app_attempt_id, app_id, job_id).add_container container_id
     end
     return container
   end
+
   def get_create_block(block_id)
     if @blocks.has_key? block_id
       block = @blocks[block_id]

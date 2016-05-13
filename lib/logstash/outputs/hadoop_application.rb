@@ -35,12 +35,18 @@ class HadoopApplication
     @created = Time.now
     @app_states = Hash.new
     @events = Hash.new
-    @app_attempts = Hash.new
+    # @app_attempts = Hash.new
+    @app_attempts = []
   end
 
 
-  def add_attempt(attempt_id, attempt)
-    @app_attempts[attempt_id]= attempt
+  # def add_attempt(attempt_id, attempt)
+  #   @app_attempts[attempt_id]= attempt
+  # end
+  def add_attempt(attempt_id)
+    unless @app_attempts.include? attempt_id
+      @app_attempts+= [attempt_id]
+    end
   end
 
   def parse_data (data)

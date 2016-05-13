@@ -25,11 +25,18 @@ class HadoopJob
   def initialize(id)
     @id = id
     @created = Time.now
-    @applications = Hash.new
+    # @applications = Hash.new
+    @applications = []
   end
 
-  def add_app(app_id, app)
-    @applications[app_id] = app
+  # def add_app(app_id, app)
+  # @applications[app_id] = app
+  # end
+
+  def add_app(app_id)
+    unless @applications.include? app_id
+      @applications += [app_id]
+    end
   end
 
   def parse_data (data)

@@ -25,6 +25,17 @@ class HadoopHDFSBlock
       @namespace = data['namespace']
       @path = data['HDFSpath']
       @states[data['timestamp']]=['Deleted', data['hdfs_host']]
+    elsif data['message'].include?('DataNode: Receiving')
+      @namespace = data['namespace']
+      @source_host = data['source_host']
+      @destination_host = data['dest_host']
+      @states[data['timestamp']]=['Receiving block']
+    elsif data['message'].include?('DataNode: Received')
+      @namespace = data['namespace']
+      @source_host = data['source_host']
+      @destination_host = data['dest_host']
+      @states[data['timestamp']]=['Received block']
+      @size = data['size']
     else
       return false
     end
