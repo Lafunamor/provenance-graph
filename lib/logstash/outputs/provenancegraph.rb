@@ -21,6 +21,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
   public
   def register
+    @count = 0
     @jobs = Hash.new
     @applications = Hash.new
     @app_attempts = Hash.new
@@ -33,7 +34,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
   public
   def receive(event)
-
+    @count +=1
     data = event.to_hash
     type = nil
 
@@ -94,9 +95,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           unhandled data
         end
       when 'hdfs'
-        block = get_create_block block_id
-        unless block.parse_data data
-          unhandled data
+        unless data.has_key?('srvID')
+          block = get_create_block block_id
+          unless block.parse_data data
+            unhandled data
+          end
         end
       else
         unhandled data
@@ -106,28 +109,37 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     # open(path + 'file.txt', 'a') { |f|
     #   f.puts data
     # }
-
+    if @count % 1000 == 0
+      open(path + 'count.txt', 'w') { |f|
+        # @jobs.each {|j|
+        #   f.puts j}
+        # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
+        # f.puts '**************************************************'
+        f.puts @count
+      }
+      serialize
+    end
     # if data["message"].include?("JobSummary")
-    open(path + 'jobs.txt', 'w') { |f|
-      # @jobs.each {|j|
-      #   f.puts j}
-      # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
-      # f.puts '**************************************************'
-      f.puts @jobs
-    }
-    open(path + 'hdfs.txt', 'w') { |f|
-      # @blocks.each {|j|
-      #   f.puts j}
-      # f.puts JSON.pretty_generate(@blocks, :object_nl => '\n')
-      # f.puts '**************************************************'
-      f.puts @blocks
-    }
+    # open(path + 'jobs.txt', 'w') { |f|
+    #   # @jobs.each {|j|
+    #   #   f.puts j}
+    #   # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
+    #   # f.puts '**************************************************'
+    #   f.puts @jobs
+    # }
+    # open(path + 'hdfs.txt', 'w') { |f|
+    #   # @blocks.each {|j|
+    #   #   f.puts j}
+    #   # f.puts JSON.pretty_generate(@blocks, :object_nl => '\n')
+    #   # f.puts '**************************************************'
+    #   f.puts @blocks
+    # }
     #end
     # File.write(path + 'jobs.txt', @jobs)
     # File.write(path + 'hdfs.txt', @blocks)
 
     #File.write('/home/cloudera/file.txt', event.to_hash)
-    serialize
+
   end
 
   def deserialize

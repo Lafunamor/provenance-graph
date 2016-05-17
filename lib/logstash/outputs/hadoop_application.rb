@@ -65,7 +65,9 @@ class HadoopApplication
       @end_time = data['timestamp']
     elsif data['message'].include?('ApplicationSummary')
       get_summary data
-
+    elsif data.has_key?('CleanLocalDisk')
+      @removed_at = data['timestamp']
+      @clenup_local_disks = data['CleanLocalDisk']
 
     else
       return false

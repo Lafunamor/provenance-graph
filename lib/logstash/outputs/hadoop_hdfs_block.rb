@@ -36,6 +36,8 @@ class HadoopHDFSBlock
       @destination_host = data['dest_host']
       @states[data['timestamp']]=['Received block']
       @size = data['size']
+    elsif data.has_key?('srvID')
+
     else
       return false
     end
