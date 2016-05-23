@@ -1,5 +1,6 @@
 require_relative 'hadoop_state_change'
 require_relative 'hadoop_event'
+require 'concurrent'
 
 class HadoopApplication
 
@@ -32,9 +33,10 @@ class HadoopApplication
 
   def initialize(id)
     @id = id
-    @created = Time.now
-    @app_states = Hash.new
-    @events = Hash.new
+    @last_edited = Time.now
+    @app_states = ThreadSafe::Hash.new
+    @events = ThreadSafe::Hash.new
+    @blocks = ThreadSafe::Hash.new
     # @app_attempts = Hash.new
     @app_attempts = []
   end
@@ -73,6 +75,7 @@ class HadoopApplication
       return false
 
     end
+    @last_edited = Time.now
     return true
   end
 
@@ -111,5 +114,13 @@ class HadoopApplication
 
   end
 
+  def add_hdfs_trace(data)
+    @blocks[data['timestamp']]= [data['namespace'], data['Block_ID'], data['operation']]
+    return true
+  end
+
+  def last_edited
+    return @last_edited
+  end
 
 end

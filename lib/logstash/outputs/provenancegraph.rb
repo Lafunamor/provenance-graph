@@ -7,7 +7,9 @@ require_relative 'hadoop_container'
 require_relative 'hadoop_app_attempt'
 require_relative 'hadoop_hdfs_block'
 require 'rubygems'
-require 'json'
+require 'concurrent'
+require 'thread_safe'
+require 'thread'
 
 # An example output that does nothing.
 class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
@@ -17,20 +19,38 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   # config :fields, :validate => :array, :required => true
   #:fields
   config :path, :validate => :string, :required => true
+  config :flush, :validate => :number, :required => false
+  default :flush, '300'
   default :codec, 'json_lines'
 
   public
   def register
+    @logger.debug('starting', :plugin => self)
     @count = 0
-    @jobs = Hash.new
-    @applications = Hash.new
-    @app_attempts = Hash.new
-    @containers = Hash.new
-    @blocks = Hash.new
+    @logger.debug('loading data', :plugin => self)
     deserialize
+    if @jobs.nil? || @jobs == false
+        @jobs = ThreadSafe::Hash.new
+    end
+    if @applications.nil? || @applications == false
+        @applications = ThreadSafe::Hash.new
+    end
+    if @app_attempts.nil? || @app_attempts == false
+        @app_attempts = ThreadSafe::Hash.new
+    end
+    if @containers.nil? || @containers == false
+      @containers = ThreadSafe::Hash.new
+    end
+    if @blocks.nil? || @blocks == false
+      @blocks = ThreadSafe::Hash.new
+    end
+    @write_thread = nil
+    @last_flush = Time.now
+    @eps = 0
+    @last_count = 0
+    @logger.debug('finished initialisation', :plugin => self)
   end
 
-  # def register
 
   public
   def receive(event)
@@ -51,6 +71,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       app_id = ids[1]+'_'+ ids[2]
       app_attempt_id = ids[1] +'_'+ ids[2] +'_'+ ids[3]
       type = 'attempt'
+    elsif data.has_key? ('DFSClientID')
+      ids = data['DFSClientID'].split('_')
+      job_id = ids[2]+'_'+ ids[3]
+      app_id = ids[2]+'_'+ ids[3]
+      type = 'hdfs_trace'
     elsif data.has_key?('ApplicationID')
       ids = data['ApplicationID'].split('_')
       job_id = ids[1]+'_'+ ids[2]
@@ -82,6 +107,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         unless app.parse_data data
           unhandled data
         end
+      when 'hdfs_trace'
+        app = get_create_app app_id, job_id
+        unless app.add_hdfs_trace data
+          unhandled data
+        end
       when 'attempt'
         # noinspection RubyScope
         app_attempt = get_create_attempt app_attempt_id, app_id, job_id
@@ -106,18 +136,35 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         return
     end
 
-    # open(path + 'file.txt', 'a') { |f|
-    #   f.puts data
-    # }
-    if @count % 1000 == 0
-      open(path + 'count.txt', 'w') { |f|
-        # @jobs.each {|j|
-        #   f.puts j}
-        # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
-        # f.puts '**************************************************'
-        f.puts @count
-      }
-      serialize
+    time_difference = Time.now - @last_flush
+    @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
+    if time_difference >= 30
+      @last_flush = Time.now
+      @eps = (@eps + (@count-@last_count)/time_difference)/2
+      @last_count = @count
+      # open(path + 'count.txt', 'w') { |f|
+      #   # @jobs.each {|j|
+      #   #   f.puts j}
+      #   # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
+      #   # f.puts '**************************************************'
+      #   f.puts @count
+      # }
+      # unless @thread_exists
+      #   @thread_exists = true
+        counter = @count
+      if @write_thread.nil? || @write_thread.stop?
+        @write_thread = Thread.new(counter, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone) {
+            |count, eps, jobs, apps, app_attempts, containers, blocks|
+          open(path + 'count.txt', 'w') { |f|
+            f.puts count
+            f.puts eps
+          }
+          serialize(jobs,apps,app_attempts,containers,blocks)
+          # th_ex = false
+        }
+      end
+      # flush
+      # unhandled(data)
     end
     # if data["message"].include?("JobSummary")
     # open(path + 'jobs.txt', 'w') { |f|
@@ -143,42 +190,60 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   end
 
   def deserialize
-    if File.file?(path + '.save_job.yaml')
+    if File.exists?(path + '.save_job.yaml')
       @jobs = YAML.load(File.read(path + '.save_job.yaml'))
     end
-    if File.file?(path + '.save_apps.yaml')
+    if File.exists?(path + '.save_apps.yaml')
       @applications = YAML.load(File.read(path + '.save_apps.yaml'))
     end
-    if File.file?(path + '.save_appattempt.yaml')
+    if File.exists?(path + '.save_appattempt.yaml')
       @app_attempts = YAML.load(File.read(path + '.save_appattempt.yaml'))
     end
-    if File.file?(path + '.save_joby.yaml')
+    if File.exists?(path + '.save_containers.yaml')
       @containers = YAML.load(File.read(path + '.save_containers.yaml'))
     end
-    if File.file?(path + '.save_containers.yaml')
-      @blocks =YAML.load(File.read(path + '.save_blocks.yaml'))
+    if File.exists?(path + '.save_blocks.yaml')
+      @blocks = YAML.load(File.read(path + '.save_blocks.yaml'))
     end
   end
 
-  def serialize
+  def serialize(jobs, apps, appattempts, containers, blocks)
     File.open(path + '.save_job.yaml', 'w') { |f|
-      f.write(YAML.dump(@jobs))
+      f.write(YAML.dump(jobs))
     }
     File.open(path + '.save_apps.yaml', 'w') { |f|
-      f.write(YAML.dump(@applications))
+      f.write(YAML.dump(apps))
     }
     File.open(path + '.save_appattempt.yaml', 'w') { |f|
-      f.write(YAML.dump(@app_attempts))
+      f.write(YAML.dump(appattempts))
     }
     File.open(path + '.save_containers.yaml', 'w') { |f|
-      f.write(YAML.dump(@containers))
+      f.write(YAML.dump(containers))
     }
-
-
     File.open(path + '.save_blocks.yaml', 'w') { |f|
-      f.write(YAML.dump(@blocks))
+      f.write(YAML.dump(blocks))
     }
   end
+
+  def flush
+    export_to_graph
+    remove_old_data
+  end
+
+  def export_to_graph
+
+  end
+
+  def remove_old_data
+    @jobs.delete_if {|key, value| value.has_job_summary?}
+    @jobs.delete_if {|key, value| Time.now - value.last_edited >= 120}
+    @applications.delete_if {|key, value| Time.now - value.last_edited >= 120}
+    @app_attempts.delete_if {|key, value| Time.now - value.last_edited >= 120}
+    @containers.delete_if {|key, value| Time.now - value.last_edited >= 120}
+    @blocks.delete_if {|key, value| Time.now - value.last_edited >= 120}
+  end
+
+
 
   def unhandled(data)
     open(path + 'unhandled.txt', 'a') { |f|
@@ -239,6 +304,12 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     return block
   end
 
+  # handles shutdown of pipeline
+  def close
+    @logger.debug('clean shutdown, writing to disk', :plugin => self)
+    serialize(@jobs,@applications,@app_attempts,@containers,@blocks)
+    @logger.debug('writing to disk completed, shutting down', :plugin => self)
+  end
 
-end # class LogStash::Outputs::Example
+end # class LogStash::Outputs::ProvenanceGraph
 

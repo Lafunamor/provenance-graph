@@ -1,5 +1,6 @@
 
 require_relative 'hadoop_container_resource_usage'
+require 'concurrent'
 
 class HadoopContainer
 
@@ -30,11 +31,11 @@ class HadoopContainer
 
   def initialize(id)
     @id = id
-    @created = Time.now
-    @container_states = Hash.new
-    @states = Hash.new
-    @events = Hash.new
-    @resource_usage = Hash.new
+    @last_edited = Time.now
+    @container_states = ThreadSafe::Hash.new
+    @states = ThreadSafe::Hash.new
+    @events = ThreadSafe::Hash.new
+    @resource_usage = ThreadSafe::Hash.new
   end
 
   def parse_data (data)
@@ -77,7 +78,12 @@ class HadoopContainer
       return false
 
     end
+    @last_edited = Time.now
     return true
+  end
+
+  def last_edited
+    return @last_edited
   end
 
 end

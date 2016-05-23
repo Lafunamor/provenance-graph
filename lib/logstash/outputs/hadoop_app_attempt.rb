@@ -1,5 +1,6 @@
 require_relative 'hadoop_state_change'
 require_relative 'hadoop_event'
+require 'concurrent'
 
 class HadoopAppAttempt
 
@@ -23,10 +24,10 @@ class HadoopAppAttempt
 
   def initialize(id)
     @id = id
-    @created = Time.now
+    @last_edited = Time.now
     # @containers = Hash.new
-    @app_states = Hash.new
-    @events = Hash.new
+    @app_states = ThreadSafe::Hash.new
+    @events = ThreadSafe::Hash.new
     @containers = []
   end
 
@@ -54,6 +55,7 @@ class HadoopAppAttempt
       return false
 
     end
+    @last_edited = Time.now
     return true
   end
 
@@ -80,6 +82,10 @@ class HadoopAppAttempt
     if data.has_key? 'Token'
       @token = data['Token']
     end
+  end
+
+  def last_edited
+    return @last_edited
   end
 
 

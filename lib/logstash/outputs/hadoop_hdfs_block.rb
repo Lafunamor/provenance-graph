@@ -1,9 +1,11 @@
+require 'concurrent'
+
 class HadoopHDFSBlock
 
   def initialize(id)
     @id = id
-    @created = Time.now
-    @states = Hash.new
+    @last_edited = Time.now
+    @states = ThreadSafe::Hash.new
   end
 
   def parse_data(data)
@@ -41,12 +43,12 @@ class HadoopHDFSBlock
     else
       return false
     end
+    @last_edited = Time.now
     return true
   end
 
-    # def to_s
-    #   'Block: '+@id+', namepscae='+@namespace+', path='+@path+', '+@states
-    # end
-
+  def last_edited
+    return @last_edited
+  end
 
 end

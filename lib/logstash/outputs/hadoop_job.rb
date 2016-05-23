@@ -24,9 +24,10 @@ class HadoopJob
 
   def initialize(id)
     @id = id
-    @created = Time.now
+    @last_edited = Time.now
     # @applications = Hash.new
     @applications = []
+    @job_summary = false
   end
 
   # def add_app(app_id, app)
@@ -86,13 +87,19 @@ class HadoopJob
     if data.has_key? 'jobName'
       @job_name = data['jobName']
     end
-    # if data['message'].include?('JobSummary')
-    #   open('/home/cloudera/share/provenance-graph/output/jobs2.txt', 'a') { |f|
-    #     f.puts 'Summary found'
-    #     f.puts data
-    #   }
-    # end
+    if data['message'].include?('JobSummary')
+      @job_summary = true
+    end
+    @last_edited = Time.now
     return true
+  end
+
+  def has_job_summary?
+    @job_summary
+  end
+
+  def last_edited
+    return @last_edited
   end
 
 end

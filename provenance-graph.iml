@@ -18,7 +18,7 @@
     <orderEntry type="library" scope="PROVIDED" name="i18n (v0.6.9, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="insist (v1.0.0, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="jar-dependencies (v0.3.2, jruby-9.0.5.0-p0) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="jrjackson (v0.3.8, jruby-9.0.5.0-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="jrjackson (v0.3.9, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="jruby-openssl (v0.9.13, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="kramdown (v1.10.0, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="logstash-codec-plain (v2.0.4, jruby-9.0.5.0-p0) [gem]" level="application" />
