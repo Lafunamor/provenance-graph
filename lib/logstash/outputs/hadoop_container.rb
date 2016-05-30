@@ -1,79 +1,63 @@
-
 require_relative 'hadoop_container_resource_usage'
+require_relative 'hadoop_base'
 require 'concurrent'
 
-class HadoopContainer
-
-  # @created
-  # @ID
-  # @startRequestTime # Time at which the container manager receives a start request
-  # @username
-  # @localizerCreatedAt # Time at which the resource localizer was created
-  # @succeededAt # Time at which the container succeeded
-  # @cleanUpTime
-  # @host
-  # @addedToAppAt
-  # @removedFromApp
-  # @stoppedAt
-  # @startedAt
-  # @arguments
-  #
-  #
-  # # State changes if the container
-  # @ContainerStates
-  # # Sates of the container
-  # @States
-  # # List of Events
-  # @Events
-  # # Resource usage
-  # @ResourceUsage
+class HadoopContainer < HadoopBase
 
 
   def initialize(id)
     @id = id
     @last_edited = Time.now
-    @container_states = ThreadSafe::Hash.new
-    @states = ThreadSafe::Hash.new
-    @events = ThreadSafe::Hash.new
-    @resource_usage = ThreadSafe::Hash.new
+    @container_states = [] #ThreadSafe::Hash.new
+    @states = [] #ThreadSafe::Hash.new
+    @events = [] #ThreadSafe::Hash.new
+    @resource_usage = [] #ThreadSafe::Hash.new
+    @data = ThreadSafe::Hash.new
   end
 
   def parse_data (data)
     if data.has_key? 'PreviousState'
-      @container_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
-
+      # @container_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
+      @container_states += [data['timestamp'], data['PreviousState'], data['State']]
+      ###########
     elsif data.has_key? 'Event'
-      @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
-
+      # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
+      ##########
+      @events += [data['timestamp'], data['Event']]
     elsif data['message'].include?('Start request')
-      @start_request_time = data['timestamp']
+      @data['start_request_time'] = data['timestamp']
       if @username.nil?
         @username = data['UserName']
       end
     elsif data.has_key? 'StateChange'
-      @states[data['timestamp']] = data['StateChange']
+      # @states[data['timestamp']] = data['StateChange']
+      @states += [data['timestamp'], data['StateChange']]
+      ##########
     elsif data['message'].include?('Created localizer')
-      @localizer_created_at = data['timestamp']
+      @data['localizer_created_at'] = data['timestamp']
     elsif data.has_key? 'ProcessTreeID'
-      @resource_usage[data['timestamp']] = HadoopContainerResourceUsage.new(data['timestamp'], data['ProcessTreeID'], data['UsedPysicalMemory'], data['AvailablePhysicalMemory'], data['UsedVirtualMemory'], data['AvailableVirtualMemory'])
+      # @resource_usage[data['timestamp']] = HadoopContainerResourceUsage.new(data['timestamp'], data['ProcessTreeID'], data['UsedPysicalMemory'], data['AvailablePhysicalMemory'], data['UsedVirtualMemory'], data['AvailableVirtualMemory'])
+      ##########
+      @resource_usage += [data['timestamp'], data['ProcessTreeID'], data['UsedPysicalMemory'], data['AvailablePhysicalMemory'], data['UsedVirtualMemory'], data['AvailableVirtualMemory']]
+      ##########
     elsif data['message'].include?('succeeded')
-      @succeeded_at = data['timestamp']
+      @data['succeeded_at'] = data['timestamp']
     elsif data['message'].include?('Cleaning up container')
-      @clean_up_time = data['timestamp']
+      @data['clean_up_time'] = data['timestamp']
     elsif data.has_key? 'ReleaseResource'
-      @host = data['Host']
-      @capacity = data['capacity']
-    # elsif data["message"].include?("Start request")
-    #   getSummary data
+      @host = data['Host'].split(':')[0]
+      @data['capacity'] = data['capacity']
+      # elsif data["message"].include?("Start request")
+      #   getSummary data
     elsif data['message'].include?('Adding container')
-      @added_to_app_at = data['timestamp']
+      @data['added_to_app_at'] = data['timestamp']
     elsif data['message'].include?('Removing container')
-      @removed_from_app = data['timestamp']
+      @data['removed_from_app'] = data['timestamp']
     elsif data['message'].include?('Stopping container with container Id')
-      @stopped_at = data['timestamp']
+      @data['stopped_at'] = data['timestamp']
     elsif data.has_key? 'Arguments'
-      @started_at = data['timestamp']
-      @arguments = data['Arguments']
+      @data['started_at'] = data['timestamp']
+      @data['arguments'] = data['Arguments']
     else
       return false
 
@@ -84,6 +68,43 @@ class HadoopContainer
 
   def last_edited
     return @last_edited
+  end
+
+  def node
+    if @node.nil?
+      @node = get_create_container(@id)
+    end
+    return @node
+  end
+
+  def to_db
+
+    node
+
+    node.update_props(@data)
+
+    node[:states] +=@container_states
+    node[:events] += @events
+    node[:state_changes] += @states
+    node[:resource_usage] += @resource_usage
+
+
+    unless @host.nil?
+      h = get_create_host(@host)
+      rel = node.rels(dir: :outgoing, between: h)
+      if rel.length == 0
+        @node.create_rel(:hosted_on, h)
+      end
+    end
+
+    unless @username.nil?
+      user = get_create_username(@username)
+      rel = node.rels(dir: :outgoing, between: user)
+      if rel.length == 0
+        @node.create_rel(:belongs_to, user)
+      end
+    end
+
   end
 
 end

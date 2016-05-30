@@ -1,8 +1,9 @@
 require_relative 'hadoop_state_change'
 require_relative 'hadoop_event'
 require 'concurrent'
+require_relative 'hadoop_base'
 
-class HadoopAppAttempt
+class HadoopAppAttempt < HadoopBase
 
   # @created
   # @ID
@@ -26,26 +27,25 @@ class HadoopAppAttempt
     @id = id
     @last_edited = Time.now
     # @containers = Hash.new
-    @app_states = ThreadSafe::Hash.new
-    @events = ThreadSafe::Hash.new
+    @app_states = []
+    @events = []
     @containers = []
+    @data = ThreadSafe::Hash.new
   end
 
-  # def add_container(container_id, container)
-  #   @containers[container_id] = container
-  # end
-  def add_container(container_id)
-    unless @containers.include? container_id
-      @containers+=[container_id]
+  def add_container(container)
+    unless @containers.include? container
+      @containers+=[container]
     end
   end
 
   def parse_data (data)
     if data.has_key? 'PreviousState'
-      @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
+      # @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
+      @app_states += [data['timestamp'], data['PreviousState'], data['State']]
     elsif data.has_key? 'Event'
-      @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
-
+      # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
+      @events += [data['timestamp'], data['Event']]
     elsif data['message'].include?('is done.')
       get_summary data
     elsif data['message'].include?('Storing attempt')
@@ -61,26 +61,29 @@ class HadoopAppAttempt
 
   def get_summary(data)
     if data.has_key? 'FinalState'
-      @final_state = data['FinalState']
-      @end_time = data['timestamp']
+      @data['final_state'] = data['FinalState']
+      @data['end_time'] = data['timestamp']
     end
     if data.has_key? 'MasterContainerID'
-      @master_container = data['MasterContainerID']
+      ids = data['MasterContainerID'].split('_')
+      @master_container = ids[1] +'_'+ ids[2] +'_'+ ids[3] +'_'+ ids[4]
+
     end
     if data.has_key? 'Node'
-      @node = data['Node']
+      @host = data['Node'].split(':')[0]
+
     end
     if data.has_key? 'NodeHTTPAddress'
-      @node_http_adr = data['NodeHTTPAddress']
+      @data['host_http_adr'] = data['NodeHTTPAddress']
     end
     if data.has_key? 'resource'
-      @resource = data['resource']
+      @data['resource'] = data['resource']
     end
     if data.has_key? 'Priority'
-      @priority = data['Priority']
+      @data['priority'] = data['Priority']
     end
     if data.has_key? 'Token'
-      @token = data['Token']
+      @data['token'] = data['Token']
     end
   end
 
@@ -88,5 +91,45 @@ class HadoopAppAttempt
     return @last_edited
   end
 
+  def node
+    if @node.nil?
+      @node = get_create_attempt(@id)
+    end
+    return @node
+  end
+
+  def to_db
+
+    node
+
+    @containers.each { |container|
+      rel = node.rels(dir: :outgoing, between: container.node)
+      if rel.length == 0
+        @node.create_rel(:has, container.node)
+      end
+    }
+
+    node.update_props(@data)
+    node[:states] +=@app_states
+    node[:events] += @events
+
+    unless @master_container.nil?
+      master_host = get_create_container(@master_container)
+      rel = node.rels(dir: :outgoing, between: master_host)
+      if rel.length == 0
+        @node.create_rel(:master_container, master_host)
+      end
+    end
+
+    unless @host.nil?
+      h = get_create_host(@host)
+      rel = node.rels(dir: :outgoing, between: h)
+      if rel.length == 0
+        @node.create_rel(:hosted_on, h)
+      end
+    end
+
+
+  end
 
 end

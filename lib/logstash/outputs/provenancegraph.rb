@@ -10,6 +10,10 @@ require 'rubygems'
 require 'concurrent'
 require 'thread_safe'
 require 'thread'
+require 'neo4j-core'
+require 'neo4j-embedded'
+require 'neo4j-embedded/embedded_ha_session'
+
 
 # An example output that does nothing.
 class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
@@ -20,23 +24,31 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   #:fields
   config :path, :validate => :string, :required => true
   config :flush, :validate => :number, :required => false
+
+  # configuration for the neo4j graph db
+  config :neo4j_server, :validate => :string, :required => true
+  config :neo4j_username, :validate => :string, :required => true
+  config :neo4j_password, :validate => :string, :required => true
+
+  # defaults
   default :flush, '300'
   default :codec, 'json_lines'
+
 
   public
   def register
     @logger.debug('starting', :plugin => self)
     @count = 0
     @logger.debug('loading data', :plugin => self)
-    deserialize
+    # deserialize
     if @jobs.nil? || @jobs == false
-        @jobs = ThreadSafe::Hash.new
+      @jobs = ThreadSafe::Hash.new
     end
     if @applications.nil? || @applications == false
-        @applications = ThreadSafe::Hash.new
+      @applications = ThreadSafe::Hash.new
     end
     if @app_attempts.nil? || @app_attempts == false
-        @app_attempts = ThreadSafe::Hash.new
+      @app_attempts = ThreadSafe::Hash.new
     end
     if @containers.nil? || @containers == false
       @containers = ThreadSafe::Hash.new
@@ -49,6 +61,29 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @eps = 0
     @last_count = 0
     @logger.debug('finished initialisation', :plugin => self)
+
+    # Using Neo4j Server Cypher Database
+    begin
+      @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
+
+      # embeded
+      # # /var/lib/neo4j/data/
+      # @session = Neo4j::Session.open(:ha_db, '/var/lib/neo4j/data/', auto_commit: true)
+      # @session.start
+      Neo4j::Label.create(:job).create_index(:id)
+      Neo4j::Label.create(:application).create_index(:id)
+      Neo4j::Label.create(:attempt).create_index(:id)
+      Neo4j::Label.create(:container).create_index(:id)
+      Neo4j::Label.create(:file).create_index(:name)
+      Neo4j::Label.create(:queue).create_index(:name)
+      Neo4j::Label.create(:host).create_index(:name)
+      Neo4j::Label.create(:user).create_index(:username)
+
+    rescue Error => error
+      @logger.error('Could not connect to neo4j DB' + error, :plugin => self)
+    end
+
+
   end
 
 
@@ -75,7 +110,10 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       ids = data['DFSClientID'].split('_')
       job_id = ids[2]+'_'+ ids[3]
       app_id = ids[2]+'_'+ ids[3]
-      type = 'hdfs_trace'
+      block_id = data['Block_ID']
+      if ids[1]== 'attempt'
+        type = 'hdfs_trace'
+      end
     elsif data.has_key?('ApplicationID')
       ids = data['ApplicationID'].split('_')
       job_id = ids[1]+'_'+ ids[2]
@@ -109,7 +147,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         end
       when 'hdfs_trace'
         app = get_create_app app_id, job_id
-        unless app.add_hdfs_trace data
+        unless app.add_hdfs_trace data, get_create_block(block_id)
           unhandled data
         end
       when 'attempt'
@@ -139,53 +177,34 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     if time_difference >= 30
-      @last_flush = Time.now
+
       @eps = (@eps + (@count-@last_count)/time_difference)/2
       @last_count = @count
-      # open(path + 'count.txt', 'w') { |f|
-      #   # @jobs.each {|j|
-      #   #   f.puts j}
-      #   # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
-      #   # f.puts '**************************************************'
-      #   f.puts @count
-      # }
-      # unless @thread_exists
-      #   @thread_exists = true
-        counter = @count
+      counter = @count
+
       if @write_thread.nil? || @write_thread.stop?
+        @last_flush = Time.now
         @write_thread = Thread.new(counter, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone) {
             |count, eps, jobs, apps, app_attempts, containers, blocks|
           open(path + 'count.txt', 'w') { |f|
             f.puts count
             f.puts eps
           }
-          serialize(jobs,apps,app_attempts,containers,blocks)
-          # th_ex = false
+          # serialize(jobs, apps, app_attempts, containers, blocks)
+          start = Time.now
+          flush_to_db(jobs, apps, app_attempts, containers, blocks)
+          end_time = Time.now
+          open(path + 'to_db.txt', 'w') { |f|
+            f.puts 'written ' + end_time.to_s
+            f.puts 'elapsed time: ' + (end_time - start).to_s
+            f.puts count
+          }
         }
+        remove_old_data
       end
-      # flush
+
       # unhandled(data)
     end
-    # if data["message"].include?("JobSummary")
-    # open(path + 'jobs.txt', 'w') { |f|
-    #   # @jobs.each {|j|
-    #   #   f.puts j}
-    #   # f.puts JSON.pretty_generate(@jobs, :object_nl => '\n')
-    #   # f.puts '**************************************************'
-    #   f.puts @jobs
-    # }
-    # open(path + 'hdfs.txt', 'w') { |f|
-    #   # @blocks.each {|j|
-    #   #   f.puts j}
-    #   # f.puts JSON.pretty_generate(@blocks, :object_nl => '\n')
-    #   # f.puts '**************************************************'
-    #   f.puts @blocks
-    # }
-    #end
-    # File.write(path + 'jobs.txt', @jobs)
-    # File.write(path + 'hdfs.txt', @blocks)
-
-    #File.write('/home/cloudera/file.txt', event.to_hash)
 
   end
 
@@ -207,7 +226,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     end
   end
 
-  def serialize(jobs, apps, appattempts, containers, blocks)
+  def serialize(jobs, apps, app_attempts, containers, blocks)
     File.open(path + '.save_job.yaml', 'w') { |f|
       f.write(YAML.dump(jobs))
     }
@@ -215,7 +234,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       f.write(YAML.dump(apps))
     }
     File.open(path + '.save_appattempt.yaml', 'w') { |f|
-      f.write(YAML.dump(appattempts))
+      f.write(YAML.dump(app_attempts))
     }
     File.open(path + '.save_containers.yaml', 'w') { |f|
       f.write(YAML.dump(containers))
@@ -225,24 +244,27 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     }
   end
 
-  def flush
-    export_to_graph
-    remove_old_data
-  end
-
-  def export_to_graph
-
+  def flush_to_db(jobs, apps, app_attempts, containers, blocks)
+    blocks.each { |k, v| v.to_db }
+    containers.each { |k, v| v.to_db }
+    app_attempts.each { |k, v| v.to_db }
+    apps.each { |k, v| v.to_db }
+    jobs.each { |k, v| v.to_db }
   end
 
   def remove_old_data
-    @jobs.delete_if {|key, value| value.has_job_summary?}
-    @jobs.delete_if {|key, value| Time.now - value.last_edited >= 120}
-    @applications.delete_if {|key, value| Time.now - value.last_edited >= 120}
-    @app_attempts.delete_if {|key, value| Time.now - value.last_edited >= 120}
-    @containers.delete_if {|key, value| Time.now - value.last_edited >= 120}
-    @blocks.delete_if {|key, value| Time.now - value.last_edited >= 120}
+    @jobs = ThreadSafe::Hash.new
+    @applications = ThreadSafe::Hash.new
+    @app_attempts = ThreadSafe::Hash.new
+    @containers = ThreadSafe::Hash.new
+    @blocks = ThreadSafe::Hash.new
+    # @jobs.delete_if { |key, value| value.has_job_summary? }
+    # @jobs.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
+    # @applications.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
+    # @app_attempts.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
+    # @containers.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
+    # @blocks.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
   end
-
 
 
   def unhandled(data)
@@ -267,7 +289,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       app = HadoopApplication.new (app_id)
       @applications[app_id] = app
-      get_create_job(job_id).add_app app_id
+      get_create_job(job_id).add_app app
     end
     return app
   end
@@ -278,7 +300,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       app_attempt = HadoopAppAttempt.new (app_attempt_id)
       @app_attempts[app_attempt_id] = app_attempt
-      get_create_app(app_id, job_id).add_attempt app_attempt_id
+      get_create_app(app_id, job_id).add_attempt app_attempt
     end
     return app_attempt
   end
@@ -289,7 +311,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       container = HadoopContainer.new(container_id)
       @containers[container_id] = container
-      get_create_attempt(app_attempt_id, app_id, job_id).add_container container_id
+      get_create_attempt(app_attempt_id, app_id, job_id).add_container container
     end
     return container
   end
@@ -306,9 +328,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
   # handles shutdown of pipeline
   def close
-    @logger.debug('clean shutdown, writing to disk', :plugin => self)
-    serialize(@jobs,@applications,@app_attempts,@containers,@blocks)
-    @logger.debug('writing to disk completed, shutting down', :plugin => self)
+    @logger.info('clean shutdown, flushing data', :plugin => self)
+    flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
+    @logger.info('writing to disk completed, shutting down', :plugin => self)
+
+    session.close
   end
 
 end # class LogStash::Outputs::ProvenanceGraph
