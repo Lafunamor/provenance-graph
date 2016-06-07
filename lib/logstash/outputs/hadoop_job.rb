@@ -31,18 +31,17 @@ class HadoopJob < HadoopBase
     @applications = []
     @job_summary = false
     @data = ThreadSafe::Hash.new
-
   end
 
 
-  def add_app(app)
-    # unless @applications.include? app_id
-    #   @applications += [app_id]
-    #   @node.create_rel(:has, app.node)
-    # end
-    unless @applications.include? app
-      @applications += [app]
+  def add_app(app_id)
+    unless @applications.include? app_id
+      @applications += [app_id]
+      # @node.create_rel(:has, app.node)
     end
+    # unless @applications.include? app
+    #   @applications += [app]
+    # end
   end
 
   def parse_data (data)
@@ -125,33 +124,46 @@ class HadoopJob < HadoopBase
   def to_db
 
     node
-
-    # add application relations
-    @applications.each { |app|
-      rel = node.rels(dir: :outgoing, between: app.node)
-      if rel.length == 0
-        @node.create_rel(:has, app.node)
-      end
-    }
-
     node.update_props(@data)
 
+    # add application relations
+    query = " merge (j#{@id}:job {id: '#{@id}'}) "
+    @applications.each { |app_id|
+      # rel = node.rels(dir: :outgoing, between: app.node)
+      # if rel.length == 0
+      #   @node.create_rel(:has, app.node)
+      # end
+      query += "merge (ju#{app_id}:application {id: '#{app_id}'}) create unique (j#{@id})-[:has]->(ju#{app_id}) "
+    }
+
+    # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:application {id: '#{app_id}'}) create unique (j)-[:has]->(u)")
+
     unless @username.nil?
-      user = get_create_username(@username)
-      rel = node.rels(dir: :outgoing, between: user)
-      if rel.length == 0
-        @node.create_rel(:belongs_to, user)
-      end
+      # user = get_create_username(@username)
+      # rel = node.rels(dir: :outgoing, between: user)
+      # if rel.length == 0
+      #   @node.create_rel(:belongs_to, user)
+      # end
+      # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:user {name: '#{@username}'}) create unique (j)-[:belongs_to]->(u#{@username})")
+      query += "merge (ju#{@username+@id}:user {name: '#{@username}'}) create unique (j#{@id})-[:belongs_to]->(ju#{@username+@id}) "
     end
+
 
     unless @queue.nil?
-      q = get_create_queue(@queue)
-      rel = node.rels(dir: :outgoing, between: q)
-      if rel.length == 0
-        @node.create_rel(:used_queue, q)
-      end
+      # q = get_create_queue(@queue)
+      # rel = node.rels(dir: :outgoing, between: q)
+      # if rel.length == 0
+      #   @node.create_rel(:used_queue, q)
+      # end
+      # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:queue {name: '#{@queue}'}) create unique (j)-[:used_queue]->(u)")
+      query += "merge (ju#{@queue+@id}:queue {name: '#{@queue}'}) create unique (j#{@id})-[:used_queue]->(ju#{@queue+@id}) "
     end
 
+    query
+
+  end
+
+  def to_csv
 
   end
 

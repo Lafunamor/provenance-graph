@@ -10,6 +10,7 @@ class HadoopHDFSBlock < HadoopBase
     @data = ThreadSafe::Hash.new
     @source_host = []
     @destination_host = []
+    @data[:states] = []
   end
 
   def parse_data(data)
@@ -78,41 +79,49 @@ class HadoopHDFSBlock < HadoopBase
     return @node
   end
 
-  def filename
-    file = get_create_file(@path)
-    rel = node.rels(dir: :outgoing, between: file)
-    if rel.length == 0
-      @node.create_rel(:belongs_to, file)
-    end
-  end
+  # def filename
+  #   file = get_create_file(@path)
+  #   rel = node.rels(dir: :outgoing, between: file)
+  #   if rel.length == 0
+  #     @node.create_rel(:belongs_to, file)
+  #   end
+  #
+  # end
 
 
   def to_db
 
     node
-    unless @path.nil?
-      filename
-    end
-
     node.update_props(@data)
-
     node[:states] +=@states
 
+    query = " merge (aa#{@id}:block {id: '#{@id}'})  "
+
+    unless @path.nil?
+      # Neo4j::Session.current.query("merge (b:file {name: '#{@path}'}) create unique (a#{@id})-[:belongs_to]->(b)")
+      query += "merge (bb#{s(@path)}:file {name: '#{@path}'}) create unique (aa#{@id})-[:belongs_to]->(bb#{s(@path)}) "
+    end
+
+
     @source_host.each { |host|
-      source_host = get_create_host(host)
-      rel = node.rels(dir: :outgoing, between: source_host)
-      if rel.length == 0
-        @node.create_rel(:source_host, source_host)
-      end
+      # source_host = get_create_host(host)
+      # rel = node.rels(dir: :outgoing, between: source_host)
+      # if rel.length == 0
+      #   @node.create_rel(:source_host, source_host)
+      # end
+      # Neo4j::Session.current.query(" merge (b:host {name: '#{host}'}) create unique (a#{@id})-[:source_host]->(b)")
+      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:source_host]->(bb#{s(host+@id)}) "
     }
     @destination_host.each { |host|
-      dest_host = get_create_host(host)
-      rel = node.rels(dir: :outgoing, between: dest_host)
-      if rel.length == 0
-        @node.create_rel(:destination_host, dest_host)
-      end
+      # dest_host = get_create_host(host)
+      # rel = node.rels(dir: :outgoing, between: dest_host)
+      # if rel.length == 0
+      #   @node.create_rel(:destination_host, dest_host)
+      # end
+      # Neo4j::Session.current.query(" merge (b:host {name: '#{host}'}) create unique (a#{@id})-[:destination_host]->(b)")
+      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:destination_host]->(bb#{s(host+@id)}) "
     }
-
+    query
 
   end
 

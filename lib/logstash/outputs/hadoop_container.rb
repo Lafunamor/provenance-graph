@@ -13,6 +13,11 @@ class HadoopContainer < HadoopBase
     @events = [] #ThreadSafe::Hash.new
     @resource_usage = [] #ThreadSafe::Hash.new
     @data = ThreadSafe::Hash.new
+    @data[:states] = []
+    @data[:events] = []
+    @data[:state_changes] = []
+    @data[:resource_usage] = []
+
   end
 
   def parse_data (data)
@@ -88,23 +93,27 @@ class HadoopContainer < HadoopBase
     node[:state_changes] += @states
     node[:resource_usage] += @resource_usage
 
-
+    query = " merge (e#{@id}:container {id: '#{@id}'}) "
     unless @host.nil?
-      h = get_create_host(@host)
-      rel = node.rels(dir: :outgoing, between: h)
-      if rel.length == 0
-        @node.create_rel(:hosted_on, h)
-      end
+      # h = get_create_host(@host)
+      # rel = node.rels(dir: :outgoing, between: h)
+      # if rel.length == 0
+      #   @node.create_rel(:hosted_on, h)
+      # end
+      # Neo4j::Session.current.query("merge (a:container {id: '#{@id}'}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
+      query += "merge (f#{@host+@id}:host {name: '#{@host}'}) create unique (e#{@id})-[:hosted_on]->(f#{@host+@id}) "
     end
 
     unless @username.nil?
-      user = get_create_username(@username)
-      rel = node.rels(dir: :outgoing, between: user)
-      if rel.length == 0
-        @node.create_rel(:belongs_to, user)
-      end
+      # user = get_create_username(@username)
+      # rel = node.rels(dir: :outgoing, between: user)
+      # if rel.length == 0
+      #   @node.create_rel(:belongs_to, user)
+      # end
+      # Neo4j::Session.current.query("merge (a:container {id: '#{@id}'}) merge (b#{@username}:user {name: '#{@username}'}) create unique (a#{@id})-[:belongs_to]->(b#{@username})")
+      query += " merge (f#{@username+@id}:user {name: '#{@username}'}) create unique (e#{@id})-[:belongs_to]->(f#{@username+@id}) "
     end
-
+    query
   end
 
 end

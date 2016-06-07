@@ -11,12 +11,12 @@ require 'concurrent'
 require 'thread_safe'
 require 'thread'
 require 'neo4j-core'
-require 'neo4j-embedded'
-require 'neo4j-embedded/embedded_ha_session'
+require_relative 'synchronized_counter'
 
 
 # An example output that does nothing.
 class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
+
   config_name 'provenancegraph'
 
   # @Jobs
@@ -34,55 +34,75 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   default :flush, '300'
   default :codec, 'json_lines'
 
+  # declare_threadsafe!
 
   public
   def register
     @logger.debug('starting', :plugin => self)
     @count = 0
     @logger.debug('loading data', :plugin => self)
+    @available_threads = SynchronizedCounter.new 10
     # deserialize
-    if @jobs.nil? || @jobs == false
-      @jobs = ThreadSafe::Hash.new
-    end
-    if @applications.nil? || @applications == false
-      @applications = ThreadSafe::Hash.new
-    end
-    if @app_attempts.nil? || @app_attempts == false
-      @app_attempts = ThreadSafe::Hash.new
-    end
-    if @containers.nil? || @containers == false
-      @containers = ThreadSafe::Hash.new
-    end
-    if @blocks.nil? || @blocks == false
-      @blocks = ThreadSafe::Hash.new
-    end
+    # if @jobs.nil? || @jobs == false
+    @jobs = ThreadSafe::Hash.new
+    # end
+    # if @applications.nil? || @applications == false
+    @applications = ThreadSafe::Hash.new
+    # end
+    # if @app_attempts.nil? || @app_attempts == false
+    @app_attempts = ThreadSafe::Hash.new
+    # end
+    # if @containers.nil? || @containers == false
+    @containers = ThreadSafe::Hash.new
+    # end
+    # if @blocks.nil? || @blocks == false
+    @blocks = ThreadSafe::Hash.new
+    # end
     @write_thread = nil
     @last_flush = Time.now
     @eps = 0
     @last_count = 0
-    @logger.debug('finished initialisation', :plugin => self)
+
 
     # Using Neo4j Server Cypher Database
     begin
       @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
-
+        # @session = Neo4j::Session.open(:server_db, "http://127.0.0.1:7474", basic_auth: {username: "neo4j", password: "neo4jpassword"})
+      # @session = Neo4j::Session.open(:embedded_db, '//var/lib/neo4j/data', auto_commit: true)
+      # @session.start
+    # rescue
+      @logger.error('Error: Could not connect to neo4j DB', :plugin => self)
+      exit
+    end
+    begin
       # embeded
       # # /var/lib/neo4j/data/
       # @session = Neo4j::Session.open(:ha_db, '/var/lib/neo4j/data/', auto_commit: true)
       # @session.start
-      Neo4j::Label.create(:job).create_index(:id)
-      Neo4j::Label.create(:application).create_index(:id)
-      Neo4j::Label.create(:attempt).create_index(:id)
-      Neo4j::Label.create(:container).create_index(:id)
-      Neo4j::Label.create(:file).create_index(:name)
-      Neo4j::Label.create(:queue).create_index(:name)
-      Neo4j::Label.create(:host).create_index(:name)
-      Neo4j::Label.create(:user).create_index(:username)
+      # Neo4j::Label.create(:job).create_index(:id)
+      @session.query('Create CONSTRAINT ON (n:job) ASSERT n.id IS UNIQUE')
+      # Neo4j::Label.create(:application).create_index(:id)
+      @session.query('Create CONSTRAINT ON (n:application) ASSERT n.id IS UNIQUE')
+      # Neo4j::Label.create(:attempt).create_index(:id)
+      @session.query('Create CONSTRAINT ON (n:attempt) ASSERT n.id IS UNIQUE')
+      # Neo4j::Label.create(:container).create_index(:id)
+      @session.query('Create CONSTRAINT ON (n:container) ASSERT n.id IS UNIQUE')
+      # Neo4j::Label.create(:block).create_index(:id)
+      @session.query('Create CONSTRAINT ON (n:block) ASSERT n.id IS UNIQUE')
+      # Neo4j::Label.create(:file).create_index(:name)
+      @session.query('Create CONSTRAINT ON (n:file) ASSERT n.name IS UNIQUE')
+      # Neo4j::Label.create(:queue).create_index(:name)
+      @session.query('Create CONSTRAINT ON (n:queue) ASSERT n.name IS UNIQUE')
+      # Neo4j::Label.create(:host).create_index(:name)
+      @session.query('Create CONSTRAINT ON (n:host) ASSERT n.name IS UNIQUE')
+      # Neo4j::Label.create(:user).create_index(:username)
+      @session.query('Create CONSTRAINT ON (n:user) ASSERT n.username IS UNIQUE')
 
-    rescue Error => error
-      @logger.error('Could not connect to neo4j DB' + error, :plugin => self)
+    rescue
+      @logger.error('Error: DB is locked', :plugin => self)
+      exit
     end
-
+    @logger.debug('finished initialisation', :plugin => self)
 
   end
 
@@ -92,6 +112,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @count +=1
     data = event.to_hash
     type = nil
+
+    # open(path + 'events.txt', 'a') { |f|
+    #   f.puts data
+    # }
+
 
     if data.has_key? ('ContainerID')
       ids = data['ContainerID'].split('_')
@@ -176,19 +201,22 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
-    if time_difference >= 30
+    # if time_difference >= 30
+    if @count % 1000 == 0
 
-      @eps = (@eps + (@count-@last_count)/time_difference)/2
-      @last_count = @count
-      counter = @count
-
-      if @write_thread.nil? || @write_thread.stop?
+      if @available_threads.count > 0
+        @available_threads.decrement!
+        # if @write_thread.nil? || @write_thread.stop?
+        @eps = (@eps + (@count-@last_count)/(Time.now - @last_flush))/2
+        @last_count = @count
         @last_flush = Time.now
-        @write_thread = Thread.new(counter, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone) {
-            |count, eps, jobs, apps, app_attempts, containers, blocks|
+        count = @count
+        @write_thread = Thread.new(count, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone, @available_threads) {
+            |count, eps, jobs, apps, app_attempts, containers, blocks, available_threads|
           open(path + 'count.txt', 'w') { |f|
             f.puts count
             f.puts eps
+            f.puts available_threads.count
           }
           # serialize(jobs, apps, app_attempts, containers, blocks)
           start = Time.now
@@ -198,7 +226,9 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
             f.puts 'written ' + end_time.to_s
             f.puts 'elapsed time: ' + (end_time - start).to_s
             f.puts count
+            f.puts available_threads.count
           }
+          available_threads.increment!
         }
         remove_old_data
       end
@@ -245,12 +275,25 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   end
 
   def flush_to_db(jobs, apps, app_attempts, containers, blocks)
-    blocks.each { |k, v| v.to_db }
-    containers.each { |k, v| v.to_db }
-    app_attempts.each { |k, v| v.to_db }
-    apps.each { |k, v| v.to_db }
-    jobs.each { |k, v| v.to_db }
+
+    query = ""
+    blocks.each { |k, v|  query += " " + v.to_db }
+    # Neo4j::Session.current.query(query)
+
+    containers.each { |k, v| query += " " + v.to_db }
+    # Neo4j::Session.current.query(query)
+
+    app_attempts.each { |k, v| query += " " + v.to_db }
+    # Neo4j::Session.current.query(query)
+
+    apps.each { |k, v| query += " " + v.to_db }
+    # Neo4j::Session.current.query(query)
+
+    jobs.each { |k, v| query += " " + v.to_db }
+    Neo4j::Session.current.query(query)
+
   end
+
 
   def remove_old_data
     @jobs = ThreadSafe::Hash.new
@@ -289,7 +332,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       app = HadoopApplication.new (app_id)
       @applications[app_id] = app
-      get_create_job(job_id).add_app app
+      get_create_job(job_id).add_app app_id
     end
     return app
   end
@@ -300,7 +343,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       app_attempt = HadoopAppAttempt.new (app_attempt_id)
       @app_attempts[app_attempt_id] = app_attempt
-      get_create_app(app_id, job_id).add_attempt app_attempt
+      get_create_app(app_id, job_id).add_attempt app_attempt_id
     end
     return app_attempt
   end
@@ -311,7 +354,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       container = HadoopContainer.new(container_id)
       @containers[container_id] = container
-      get_create_attempt(app_attempt_id, app_id, job_id).add_container container
+      get_create_attempt(app_attempt_id, app_id, job_id).add_container container_id
     end
     return container
   end
@@ -332,7 +375,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
     @logger.info('writing to disk completed, shutting down', :plugin => self)
 
-    session.close
+    @session.close
   end
 
 end # class LogStash::Outputs::ProvenanceGraph
