@@ -101,7 +101,7 @@ class HadoopContainer < HadoopBase
       #   @node.create_rel(:hosted_on, h)
       # end
       # Neo4j::Session.current.query("merge (a:container {id: '#{@id}'}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
-      query += "merge (f#{@host+@id}:host {name: '#{@host}'}) create unique (e#{@id})-[:hosted_on]->(f#{@host+@id}) "
+      query += "merge (f#{s(@host+@id)}:host {name: '#{@host}'}) create unique (e#{@id})-[:hosted_on]->(f#{s(@host+@id)}) "
     end
 
     unless @username.nil?
@@ -114,6 +114,19 @@ class HadoopContainer < HadoopBase
       query += " merge (f#{@username+@id}:user {name: '#{@username}'}) create unique (e#{@id})-[:belongs_to]->(f#{@username+@id}) "
     end
     query
+  end
+
+  def to_csv
+
+    @id +','+ @data['start_request_time'] +','+ @data['localizer_created_at'] +','+ @data['succeeded_at'] +','+ @data['clean_up_time'] +
+        ','+ @data['capacity'] +','+ @data['added_to_app_at'] +','+ @data['removed_from_app'] +','+ @data['stopped_at'] +
+        ','+ @data['started_at'] +','+ @data['arguments'] +
+        ','+@host +','+ @username +','+ @queue
+  end
+
+
+  def csv_header
+    'id,start_request_time,localizer_created_at,succeeded_at,clean_up_time,capacity,added_to_app_at,removed_from_app,stopped_at,started_at,arguments,host,username,queue'
   end
 
 end

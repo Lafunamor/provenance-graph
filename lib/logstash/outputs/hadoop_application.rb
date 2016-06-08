@@ -18,6 +18,7 @@ class HadoopApplication < HadoopBase
     @app_states = []
     @events = []
     @blocks = ThreadSafe::Hash.new
+    @block_ids = []
     # @app_attempts = Hash.new
     @app_attempts = []
     @data = ThreadSafe::Hash.new
@@ -111,6 +112,9 @@ class HadoopApplication < HadoopBase
 
   def add_hdfs_trace(data, block)
     @blocks[data['timestamp']]= [data['namespace'], data['Block_ID'], data['operation']]
+    unless @block_ids.include? data['Block_ID']
+      @block_ids+= [data['Block_ID']]
+    end
     Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:block {id: '#{data['Block_ID']}'}) create unique (a)-[r:#{data['operation']}]->(b)")
     # node.create_rel(data['operation'], block.node, timestamp: data['timestamp'])
     return true
@@ -178,6 +182,38 @@ class HadoopApplication < HadoopBase
     end
     query
 
+  end
+
+
+  def to_csv
+
+    @id +','+ @data['accepted_at'] +','+ @data['unregistered_at'] +','+ @data['stopping_at'] +','+ @data['end_time'] +
+         ','+ @data['removed_at'] +','+ @data['clean_up_local_disks'] +','+ @data['app_state'] +','+ @data['app_name'] +
+         ','+ @data['finish_time'] +','+ @data['tracking_url'] +','+ @data['port'] +','+ @data['start_time'] +
+         ','+ @data['final_state'] +','+ @username +','+ @queue +','+ @app_master_host
+
+
+
+  end
+
+  def to_csv2
+    string = ''
+    @app_attempts.each { |attempt_id|
+      string +=  @id +','+ attempt_id + '\n'
+    }
+    string
+  end
+
+  def to_csv3
+    string = ''
+    @block_ids.each { |block_id|
+      string +=  @id +','+ block_id + '\n'
+    }
+    string
+  end
+
+  def csv_header
+    'id,accepted_at,unregistered_at,stopping_at,end_time,removed_at,clean_up_local_disks,app_state,app_name,finish_time,tracking_url,port,start_time,final_state,username,queue,app_master_host'
   end
 
 end

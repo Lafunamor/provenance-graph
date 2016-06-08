@@ -67,10 +67,10 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     # Using Neo4j Server Cypher Database
     begin
       @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
-        # @session = Neo4j::Session.open(:server_db, "http://127.0.0.1:7474", basic_auth: {username: "neo4j", password: "neo4jpassword"})
+      # @session = Neo4j::Session.open(:server_db, "http://127.0.0.1:7474", basic_auth: {username: "neo4j", password: "neo4jpassword"})
       # @session = Neo4j::Session.open(:embedded_db, '//var/lib/neo4j/data', auto_commit: true)
       # @session.start
-    # rescue
+      # rescue
       @logger.error('Error: Could not connect to neo4j DB', :plugin => self)
       exit
     end
@@ -202,7 +202,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
-    if @count % 1000 == 0
+    if @count % 100000 == 0
 
       if @available_threads.count > 0
         @available_threads.decrement!
@@ -220,7 +220,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           }
           # serialize(jobs, apps, app_attempts, containers, blocks)
           start = Time.now
-          flush_to_db(jobs, apps, app_attempts, containers, blocks)
+          to_csv(jobs, apps, app_attempts, containers, blocks)
           end_time = Time.now
           open(path + 'to_db.txt', 'w') { |f|
             f.puts 'written ' + end_time.to_s
@@ -277,7 +277,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   def flush_to_db(jobs, apps, app_attempts, containers, blocks)
 
     query = ""
-    blocks.each { |k, v|  query += " " + v.to_db }
+    blocks.each { |k, v| query += " " + v.to_db }
     # Neo4j::Session.current.query(query)
 
     containers.each { |k, v| query += " " + v.to_db }
@@ -291,6 +291,78 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
     jobs.each { |k, v| query += " " + v.to_db }
     Neo4j::Session.current.query(query)
+
+  end
+
+  def to_csv(jobs, apps, app_attempts, containers, blocks)
+    File.open(path + 'blocks.csv', 'a') { |f|
+      blocks.each { |k, v|
+        f.puts v.to_csv
+      }
+    }
+    File.open(path + 'containers.csv', 'a') { |f|
+      containers.each { |k, v|
+        f.puts v.to_csv
+      }
+    }
+    File.open(path + 'app_attempts.csv', 'a') { |f|
+      File.open(path + 'attempts_containers.csv', 'a') { |g|
+        app_attempts.each { |k, v|
+          f.puts v.to_csv
+          g.puts v.to_csv2
+        }
+      }
+    }
+    File.open(path + 'apps.csv', 'a') { |f|
+      File.open(path + 'apps_attempts.csv', 'a') { |g|
+        File.open(path + 'apps_blocks.csv', 'a') { |h|
+          apps.each { |k, v|
+            f.puts v.to_csv
+            g.puts v.to_csv2
+            h.puts v.to_csv3
+          }
+        }
+      }
+    }
+    File.open(path + 'jobs.csv', 'a') { |f|
+      File.open(path + 'jobs_apps.csv', 'a') { |g|
+        jobs.each { |k, v|
+          f.puts v.to_csv
+          g.puts v.to_csv2
+        }
+      }
+    }
+
+  end
+
+  def to_csv_headers(jobs, apps, app_attempts, containers, blocks)
+    File.open(path + 'blocks.csv', 'a') { |f|
+      f.puts blocks.first[1].csv_header
+    }
+    File.open(path + 'containers.csv', 'a') { |f|
+      f.puts containers.first[1].csv_header
+    }
+    File.open(path + 'app_attempts.csv', 'a') { |f|
+      File.open(path + 'attempts_containers.csv', 'a') { |g|
+        f.puts app_attempts.first[1].csv_header
+        g.puts 'attempt_id,container_id'
+      }
+    }
+    File.open(path + 'apps.csv', 'a') { |f|
+      File.open(path + 'apps_attempts.csv', 'a') { |g|
+        File.open(path + 'apps_blocks.csv', 'a') { |h|
+          f.puts apps.first[1].csv_header
+          g.puts 'app_id,attempt_id'
+          h.puts 'app_id,block_id'
+        }
+      }
+    }
+    File.open(path + 'jobs.csv', 'a') { |f|
+      File.open(path + 'jobs_apps.csv', 'a') { |g|
+        f.puts jobs.first[1].csv_header
+        g.puts 'job_id,app_id'
+      }
+    }
 
   end
 

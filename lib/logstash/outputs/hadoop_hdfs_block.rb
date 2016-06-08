@@ -125,4 +125,15 @@ class HadoopHDFSBlock < HadoopBase
 
   end
 
+  def to_csv
+
+    @id +','+ @data['namespace'] +','+ @source_host +','+ @destination_host +
+        ','+ @path +','+ @username +','+ @queue
+  end
+
+
+  def csv_header
+    'id,namespace,source_host,destination_host,path,username,queue'
+  end
+
 end

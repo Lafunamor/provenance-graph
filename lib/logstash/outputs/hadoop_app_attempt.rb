@@ -5,24 +5,6 @@ require_relative 'hadoop_base'
 
 class HadoopAppAttempt < HadoopBase
 
-  # @created
-  # @ID
-  #
-  # @queue
-  # @username
-  # @unregisteredAt #unregistered at resourcemanager
-  # @acceptedAt #accepted at scheduler
-  # @stoppingAt
-  # @endTime
-  # @finalState
-  #
-  # # Hash of containers of this application
-  # @Containers
-  # # HashMap of state changes
-  # @AppStates
-  # # HashMap of Events
-  # @Events
-
   def initialize(id)
     @id = id
     @last_edited = Time.now
@@ -139,10 +121,30 @@ class HadoopAppAttempt < HadoopBase
       #   @node.create_rel(:hosted_on, h)
       # end
       # Neo4j::Session.current.query("merge (a:attempt {id: '#{@id}'}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
-      query += "merge (d#{@host+@id}:host {name: '#{@host}'}) create unique (c#{@id})-[:hosted_on]->(d#{@host+@id}) "
+      query += "merge (d#{s(@host+@id)}:host {name: '#{@host}'}) create unique (c#{@id})-[:hosted_on]->(d#{s(@host+@id)}) "
     end
    query
 
+  end
+
+  def to_csv
+
+    @id +','+ @data['final_state'] +','+ @data['end_time'] +','+ @data['host_http_adr'] +','+ @data['resource'] +
+        ','+ @data['priority'] +','+ @data['token'] +
+        ','+ @host +','+ @username +','+ @queue + ','+@master_container
+  end
+
+  def to_csv2
+    string = ''
+    @containers.each { |container_id|
+      string +=  @id +','+ container_id + '\n'
+    }
+    string
+
+  end
+
+  def csv_header
+    'id,final_state,end_time,host_http_adr,resource,priority,token,host,username,queue,master_container'
   end
 
 end

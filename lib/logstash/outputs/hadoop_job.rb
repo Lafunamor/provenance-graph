@@ -165,7 +165,23 @@ class HadoopJob < HadoopBase
 
   def to_csv
 
+    @id +','+ @data['submit_time'] +','+ @data['launch_time'] +','+ @data['first_map_task_launch_time'] +','+ @data['first_reduce_task_launch_time'] +
+        ','+ @data['finish_time'] +','+ @data['resources_per_map'] +','+ @data['resources_per_reduce'] +','+ @data['num_maps'] +
+        ','+ @data['num_reduces'] +','+ @data['job_status'] +','+ @data['map_slot_seconds'] +','+ @data['reduce_slot_seconds'] +
+        ','+ @data['job_name'] +','+ @username +','+ @queue
   end
 
+  def to_csv2
+    string = ''
+    @applications.each { |app_id|
+      string +=  @id +','+ app_id + '\n'
+    }
+    string
+
+  end
+
+  def csv_header
+    'id,submit_time,launch_time,first_map_task_launch_time,first_reduce_task_launch_time,finish_time,resources_per_map,resources_per_reduce,num_maps,num_reduces,job_status,map_slot_seconds,reduce_slot_seconds,job_name,username,queue'
+  end
 
 end

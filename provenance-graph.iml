@@ -39,7 +39,6 @@
     <orderEntry type="library" scope="PROVIDED" name="multi_json (v1.12.1, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="multi_xml (v0.5.5, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="multipart-post (v2.0.0, jruby-9.0.5.0-p0) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="neo4j-community (v2.2.4.1, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="neo4j-core (v6.1.4, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="neo4j-rake_tasks (v0.6.1, jruby-9.0.5.0-p0) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="net-http-persistent (v2.9.4, jruby-9.0.5.0-p0) [gem]" level="application" />

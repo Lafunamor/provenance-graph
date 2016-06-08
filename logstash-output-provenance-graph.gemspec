@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency "logstash-codec-plain"
   s.add_runtime_dependency "thread_safe"
   s.add_runtime_dependency "neo4j-core", ">=6.1.0"
-  s.add_runtime_dependency "neo4j-community"
+  # s.add_runtime_dependency "neo4j-community"
   # s.add_runtime_dependency "neo4j-enterprise"
 
   s.add_development_dependency "logstash-devutils"
