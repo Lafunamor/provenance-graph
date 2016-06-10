@@ -24,6 +24,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   #:fields
   config :path, :validate => :string, :required => true
   config :flush, :validate => :number, :required => false
+  config :import_mode, :required => false
 
   # configuration for the neo4j graph db
   config :neo4j_server, :validate => :string, :required => true
@@ -33,6 +34,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   # defaults
   default :flush, '300'
   default :codec, 'json_lines'
+  default :import_mode, false
 
   # declare_threadsafe!
 
@@ -63,47 +65,47 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @eps = 0
     @last_count = 0
 
+    unless @import_mode
+      # Using Neo4j Server Cypher Database
+      begin
+        @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
+          # @session = Neo4j::Session.open(:server_db, "http://127.0.0.1:7474", basic_auth: {username: "neo4j", password: "neo4jpassword"})
+          # @session = Neo4j::Session.open(:embedded_db, '//var/lib/neo4j/data', auto_commit: true)
+          # @session.start
+      rescue
+        @logger.error('Error: Could not connect to neo4j DB', :plugin => self)
+        exit
+      end
+      begin
+        # embeded
+        # # /var/lib/neo4j/data/
+        # @session = Neo4j::Session.open(:ha_db, '/var/lib/neo4j/data/', auto_commit: true)
+        # @session.start
+        # Neo4j::Label.create(:job).create_index(:id)
+        @session.query('Create CONSTRAINT ON (n:job) ASSERT n.id IS UNIQUE')
+        # Neo4j::Label.create(:application).create_index(:id)
+        @session.query('Create CONSTRAINT ON (n:application) ASSERT n.id IS UNIQUE')
+        # Neo4j::Label.create(:attempt).create_index(:id)
+        @session.query('Create CONSTRAINT ON (n:attempt) ASSERT n.id IS UNIQUE')
+        # Neo4j::Label.create(:container).create_index(:id)
+        @session.query('Create CONSTRAINT ON (n:container) ASSERT n.id IS UNIQUE')
+        # Neo4j::Label.create(:block).create_index(:id)
+        @session.query('Create CONSTRAINT ON (n:block) ASSERT n.id IS UNIQUE')
+        # Neo4j::Label.create(:file).create_index(:name)
+        @session.query('Create CONSTRAINT ON (n:file) ASSERT n.name IS UNIQUE')
+        # Neo4j::Label.create(:queue).create_index(:name)
+        @session.query('Create CONSTRAINT ON (n:queue) ASSERT n.name IS UNIQUE')
+        # Neo4j::Label.create(:host).create_index(:name)
+        @session.query('Create CONSTRAINT ON (n:host) ASSERT n.name IS UNIQUE')
+        # Neo4j::Label.create(:user).create_index(:username)
+        @session.query('Create CONSTRAINT ON (n:user) ASSERT n.username IS UNIQUE')
 
-    # Using Neo4j Server Cypher Database
-    begin
-      @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
-      # @session = Neo4j::Session.open(:server_db, "http://127.0.0.1:7474", basic_auth: {username: "neo4j", password: "neo4jpassword"})
-      # @session = Neo4j::Session.open(:embedded_db, '//var/lib/neo4j/data', auto_commit: true)
-      # @session.start
-      # rescue
-      @logger.error('Error: Could not connect to neo4j DB', :plugin => self)
-      exit
-    end
-    begin
-      # embeded
-      # # /var/lib/neo4j/data/
-      # @session = Neo4j::Session.open(:ha_db, '/var/lib/neo4j/data/', auto_commit: true)
-      # @session.start
-      # Neo4j::Label.create(:job).create_index(:id)
-      @session.query('Create CONSTRAINT ON (n:job) ASSERT n.id IS UNIQUE')
-      # Neo4j::Label.create(:application).create_index(:id)
-      @session.query('Create CONSTRAINT ON (n:application) ASSERT n.id IS UNIQUE')
-      # Neo4j::Label.create(:attempt).create_index(:id)
-      @session.query('Create CONSTRAINT ON (n:attempt) ASSERT n.id IS UNIQUE')
-      # Neo4j::Label.create(:container).create_index(:id)
-      @session.query('Create CONSTRAINT ON (n:container) ASSERT n.id IS UNIQUE')
-      # Neo4j::Label.create(:block).create_index(:id)
-      @session.query('Create CONSTRAINT ON (n:block) ASSERT n.id IS UNIQUE')
-      # Neo4j::Label.create(:file).create_index(:name)
-      @session.query('Create CONSTRAINT ON (n:file) ASSERT n.name IS UNIQUE')
-      # Neo4j::Label.create(:queue).create_index(:name)
-      @session.query('Create CONSTRAINT ON (n:queue) ASSERT n.name IS UNIQUE')
-      # Neo4j::Label.create(:host).create_index(:name)
-      @session.query('Create CONSTRAINT ON (n:host) ASSERT n.name IS UNIQUE')
-      # Neo4j::Label.create(:user).create_index(:username)
-      @session.query('Create CONSTRAINT ON (n:user) ASSERT n.username IS UNIQUE')
-
-    rescue
-      @logger.error('Error: DB is locked', :plugin => self)
-      exit
+      rescue
+        @logger.error('Error: DB is locked', :plugin => self)
+        exit
+      end
     end
     @logger.debug('finished initialisation', :plugin => self)
-
   end
 
 
@@ -172,7 +174,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         end
       when 'hdfs_trace'
         app = get_create_app app_id, job_id
-        unless app.add_hdfs_trace data, get_create_block(block_id)
+        unless app.add_hdfs_trace data, @import_mode
           unhandled data
         end
       when 'attempt'
@@ -211,8 +213,9 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         @last_count = @count
         @last_flush = Time.now
         count = @count
-        @write_thread = Thread.new(count, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone, @available_threads) {
-            |count, eps, jobs, apps, app_attempts, containers, blocks, available_threads|
+        @write_thread = Thread.new(count, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone,
+                                   @available_threads, @import_mode) {
+            |count, eps, jobs, apps, app_attempts, containers, blocks, available_threads, import_mode|
           open(path + 'count.txt', 'w') { |f|
             f.puts count
             f.puts eps
@@ -220,9 +223,13 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           }
           # serialize(jobs, apps, app_attempts, containers, blocks)
           start = Time.now
-          to_csv(jobs, apps, app_attempts, containers, blocks)
+          if import_mode
+            to_csv(jobs, apps, app_attempts, containers, blocks)
+          else
+            flush_to_db(jobs, apps, app_attempts, containers, blocks)
+          end
           end_time = Time.now
-          open(path + 'to_db.txt', 'w') { |f|
+          open(path + 'count_return.txt', 'w') { |f|
             f.puts 'written ' + end_time.to_s
             f.puts 'elapsed time: ' + (end_time - start).to_s
             f.puts count
@@ -291,35 +298,67 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
     jobs.each { |k, v| query += " " + v.to_db }
     Neo4j::Session.current.query(query)
-
   end
 
   def to_csv(jobs, apps, app_attempts, containers, blocks)
     File.open(path + 'blocks.csv', 'a') { |f|
-      blocks.each { |k, v|
-        f.puts v.to_csv
+      File.open(path + 'block_states.csv', 'a') { |i|
+        File.open(path + 'block_source_hosts.csv', 'a') { |g|
+          File.open(path + 'block_destination_hosts.csv', 'a') { |h|
+            blocks.each { |k, v|
+              f.puts v.to_csv
+              g.puts v.source_hosts_to_csv
+              h.puts v.dest_hosts_to_csv
+              i.puts v.states_to_csv
+            }
+          }
+        }
       }
     }
     File.open(path + 'containers.csv', 'a') { |f|
-      containers.each { |k, v|
-        f.puts v.to_csv
+      File.open(path + 'container_states.csv', 'a') { |g|
+        File.open(path + 'container_resource_usage.csv', 'a') { |h|
+          File.open(path + 'container_state_transitions.csv', 'a') { |i|
+            File.open(path + 'container_events.csv', 'a') { |j|
+              containers.each { |k, v|
+                f.puts v.to_csv
+                g.puts v.container_states_to_csv
+                h.puts v.resource_usage_to_csv
+                i.puts v.states_to_csv
+                j.puts v.events_to_csv
+              }
+            }
+          }
+        }
       }
     }
     File.open(path + 'app_attempts.csv', 'a') { |f|
       File.open(path + 'attempts_containers.csv', 'a') { |g|
-        app_attempts.each { |k, v|
-          f.puts v.to_csv
-          g.puts v.to_csv2
+        File.open(path + 'app_attempt_states.csv', 'a') { |i|
+          File.open(path + 'app_attempt_events.csv', 'a') { |j|
+            app_attempts.each { |k, v|
+              f.puts v.to_csv
+              g.puts v.to_csv2
+              i.puts v.states_to_csv
+              j.puts v.events_to_csv
+            }
+          }
         }
       }
     }
     File.open(path + 'apps.csv', 'a') { |f|
       File.open(path + 'apps_attempts.csv', 'a') { |g|
         File.open(path + 'apps_blocks.csv', 'a') { |h|
-          apps.each { |k, v|
-            f.puts v.to_csv
-            g.puts v.to_csv2
-            h.puts v.to_csv3
+          File.open(path + 'apps_states.csv', 'a') { |i|
+            File.open(path + 'apps_events.csv', 'a') { |j|
+              apps.each { |k, v|
+                f.puts v.to_csv
+                g.puts v.to_csv2
+                h.puts v.to_csv3
+                i.puts v.states_to_csv
+                j.puts v.events_to_csv
+              }
+            }
           }
         }
       }
@@ -332,7 +371,6 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         }
       }
     }
-
   end
 
   def to_csv_headers(jobs, apps, app_attempts, containers, blocks)
@@ -444,7 +482,12 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   # handles shutdown of pipeline
   def close
     @logger.info('clean shutdown, flushing data', :plugin => self)
-    flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
+    if @import_mode
+      to_csv(@jobs, @applications, @app_attempts, @containers, @blocks)
+    else
+      flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
+    end
+
     @logger.info('writing to disk completed, shutting down', :plugin => self)
 
     @session.close

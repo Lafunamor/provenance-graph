@@ -101,4 +101,24 @@ class HadoopBase
     string.gsub!(/[^0-9A-Za-z]/, '')
   end
 
+
+  def states_to_csv
+    string = ''
+    unless @states.empty?
+    @states.each{|k,v|
+      string += "#{@id},#{k},#{v[0]},#{v[1]}\n"
+    }
+    end
+    string
+  end
+
+  def events_to_csv
+    string = ''
+    unless @events.empty?
+    @events.each{|k,v|
+      string += "#{@id},#{k},#{v}\n"
+    }
+  end
+  string
+  end
 end

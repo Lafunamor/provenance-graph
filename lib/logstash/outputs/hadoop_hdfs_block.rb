@@ -6,56 +6,57 @@ class HadoopHDFSBlock < HadoopBase
   def initialize(id)
     @id = id
     @last_edited = Time.now
-    @states = []
+    @states = ThreadSafe::Hash.new
     @data = ThreadSafe::Hash.new
     @source_host = []
     @destination_host = []
     @data[:states] = []
+    @data['namespace'] = @path = @username = @queue = ''
   end
 
   def parse_data(data)
     if data['message'].include?('InvalidateBlocks: add')
-      # @states[data['timestamp']]=['invalidate', data['hdfs_host']]
-      @states += [data['timestamp'], 'invalidate', data['hdfs_host']]
+      @states[data['timestamp']]=['invalidate', data['hdfs_host']]
+      # @states += [data['timestamp'], 'invalidate', data['hdfs_host']]
 
     elsif data['message'].include?('allocateBlock')
       @data['namespace'] = data['namespace']
       @path = data['HDFSpath']
-      # @states[data['timestamp']]=[data['BlockUCState'], data['primaryNodeIndex'], data['replicas']]
-      @states += [data['timestamp'], data['BlockUCState'], data['primaryNodeIndex'], data['replicas']]
+      @states[data['timestamp']]=[data['BlockUCState'], data['primaryNodeIndex'], data['replicas']]
+      # @states += [data['timestamp'], data['BlockUCState'], data['primaryNodeIndex'], data['replicas']]
 
     elsif data['message'].include?('addStoredBlock')
-      # @states[data['timestamp']]=[data['BlockUCState'], data['primaryNodeIndex'], data['replicas'], data['size']]
-      @states += [data['timestamp'], data['BlockUCState'], data['primaryNodeIndex'], data['replicas'], data['size']]
+      @states[data['timestamp']]=[data['BlockUCState'], data['primaryNodeIndex'], data['replicas'], data['size']]
+      # @states += [data['timestamp'], data['BlockUCState'], data['primaryNodeIndex'], data['replicas'], data['size']]
 
     elsif data['message'].include?('addToInvalidates')
-      # @states[data['timestamp']]=['addToInvalidates']
-      @states += [data['timestamp'], 'addToInvalidates']
+      @states[data['timestamp']]=['addToInvalidates']
+      # @states += [data['timestamp'], 'addToInvalidates']
 
     elsif data['message'].include?('BlockManager') && data['message'].include?('to delete')
-      # @states[data['timestamp']]=['askToDelete', data['hdfs_host']]
-      @states += [data['timestamp'], 'askToDelete', data['hdfs_host']]
+      @states[data['timestamp']]=['askToDelete', data['hdfs_host']]
+      # @states += [data['timestamp'], 'askToDelete', data['hdfs_host']]
 
     elsif data['message'].include?('FsDatasetAsyncDiskService: Deleted')
       @data['namespace'] = data['namespace']
       @path = data['HDFSpath']
-      # @states[data['timestamp']]=['Deleted', data['hdfs_host']]
-      @states += [data['timestamp'].to_s, 'Deleted', data['hdfs_host'].to_s]
+      @states[data['timestamp']]=['Deleted', data['hdfs_host']]
+      # @states += [data['timestamp'].to_s, 'Deleted', data['hdfs_host'].to_s]
 
     elsif data['message'].include?('DataNode: Receiving')
       @data['namespace'] = data['namespace']
       @source_host += [data['source_host']]
       @destination_host += [data['dest_host']]
 
-      # @states[data['timestamp']]=['Receiving block']
-      @states += [data['timestamp'], 'Receiving block']
+      @states[data['timestamp']]=['Receiving block']
+      # @states += [data['timestamp'], 'Receiving block']
     elsif data['message'].include?('DataNode: Received')
       @data['namespace'] = data['namespace']
       @source_host += [data['source_host']]
       @destination_host += [data['dest_host']]
 
-      # @states[data['timestamp']]=['Received block']
-      @states += [data['timestamp'], 'Received block']
+      @states[data['timestamp']]=['Received block']
+      # @states += [data['timestamp'], 'Received block']
       @data['size'] = data['size']
 
 
@@ -93,7 +94,6 @@ class HadoopHDFSBlock < HadoopBase
 
     node
     node.update_props(@data)
-    node[:states] +=@states
 
     query = " merge (aa#{@id}:block {id: '#{@id}'})  "
 
@@ -126,14 +126,32 @@ class HadoopHDFSBlock < HadoopBase
   end
 
   def to_csv
+    @id +','+ @data['namespace'] +','+ @path +','+ @username +','+ @queue
+  end
 
-    @id +','+ @data['namespace'] +','+ @source_host +','+ @destination_host +
-        ','+ @path +','+ @username +','+ @queue
+  def source_hosts_to_csv
+    string = ''
+    unless @source_host.empty?
+      @source_host.each { |host|
+        string += "#{@id},#{host}\n"
+      }
+    end
+    string
+  end
+
+  def dest_hosts_to_csv
+    string = ''
+    unless @destination_host.empty?
+      @destination_host.each { |host|
+        string += "#{@id},#{host}\n"
+      }
+    end
+    string
   end
 
 
   def csv_header
-    'id,namespace,source_host,destination_host,path,username,queue'
+    'id,namespace,path,username,queue'
   end
 
 end

@@ -9,12 +9,12 @@ class HadoopAppAttempt < HadoopBase
     @id = id
     @last_edited = Time.now
     # @containers = Hash.new
-    @app_states = []
-    @events = []
+    @states = ThreadSafe::Hash.new
+    @events = ThreadSafe::Hash.new
     @containers = []
     @data = ThreadSafe::Hash.new
-    @data[:states] = []
-    @data[:events] = []
+    @data['final_state'] = @data['end_time'] = @data['host_http_adr'] = @data['resource'] = @data['priority'] = @data['token'] =
+        @host = @username = @queue = @master_container = ''
   end
 
   def add_container(container_id)
@@ -26,10 +26,10 @@ class HadoopAppAttempt < HadoopBase
   def parse_data (data)
     if data.has_key? 'PreviousState'
       # @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
-      @app_states += [data['timestamp'], data['PreviousState'], data['State']]
+      @states[data['timestamp']] = [data['AppPreviousState'], data['AppState']]
     elsif data.has_key? 'Event'
       # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
-      @events += [data['timestamp'], data['Event']]
+      @events[data['timestamp']] = data['Event']
     elsif data['message'].include?('is done.')
       get_summary data
     elsif data['message'].include?('Storing attempt')
@@ -86,8 +86,6 @@ class HadoopAppAttempt < HadoopBase
 
     node
     node.update_props(@data)
-    node[:states] +=@app_states
-    node[:events] += @events
 
     query = " merge (c#{@id}:attempt {id: '#{@id}'}) "
     @containers.each { |container_id|
@@ -137,7 +135,7 @@ class HadoopAppAttempt < HadoopBase
   def to_csv2
     string = ''
     @containers.each { |container_id|
-      string +=  @id +','+ container_id + '\n'
+      string +=  @id +','+ container_id + "\n"
     }
     string
 

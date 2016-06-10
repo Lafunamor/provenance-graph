@@ -31,6 +31,10 @@ class HadoopJob < HadoopBase
     @applications = []
     @job_summary = false
     @data = ThreadSafe::Hash.new
+    @data['submit_time'] = @data['launch_time'] = @data['first_map_task_launch_time'] = @data['first_reduce_task_launch_time'] =
+        @data['finish_time'] = @data['resources_per_map'] = @data['resources_per_reduce'] = @data['num_maps'] =
+        @data['num_reduces'] = @data['job_status'] = @data['map_slot_seconds'] = @data['reduce_slot_seconds'] =
+        @data['job_name'] = @username = @queue = ''
   end
 
 
@@ -174,7 +178,7 @@ class HadoopJob < HadoopBase
   def to_csv2
     string = ''
     @applications.each { |app_id|
-      string +=  @id +','+ app_id + '\n'
+      string +=  @id +','+ app_id + "\n"
     }
     string
 

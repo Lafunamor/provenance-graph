@@ -8,27 +8,27 @@ class HadoopContainer < HadoopBase
   def initialize(id)
     @id = id
     @last_edited = Time.now
-    @container_states = [] #ThreadSafe::Hash.new
-    @states = [] #ThreadSafe::Hash.new
-    @events = [] #ThreadSafe::Hash.new
-    @resource_usage = [] #ThreadSafe::Hash.new
+    @container_states = ThreadSafe::Hash.new
+    @states = ThreadSafe::Hash.new
+    @events = ThreadSafe::Hash.new
+    @resource_usage = ThreadSafe::Hash.new
     @data = ThreadSafe::Hash.new
-    @data[:states] = []
-    @data[:events] = []
     @data[:state_changes] = []
     @data[:resource_usage] = []
-
+    @data['start_request_time'] = @data['localizer_created_at'] = @data['succeeded_at'] = @data['clean_up_time'] = @data['capacity'] =
+        @data['added_to_app_at'] = @data['removed_from_app'] = @data['stopped_at'] = @data['started_at']= @data['arguments'] =
+            @host = @username = @queue = ''
   end
 
   def parse_data (data)
     if data.has_key? 'PreviousState'
       # @container_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
-      @container_states += [data['timestamp'], data['PreviousState'], data['State']]
+      @states[data['timestamp']] = [data['AppPreviousState'], data['AppState']]
       ###########
     elsif data.has_key? 'Event'
       # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
       ##########
-      @events += [data['timestamp'], data['Event']]
+      @events[data['timestamp']] = data['Event']
     elsif data['message'].include?('Start request')
       @data['start_request_time'] = data['timestamp']
       if @username.nil?
@@ -36,14 +36,14 @@ class HadoopContainer < HadoopBase
       end
     elsif data.has_key? 'StateChange'
       # @states[data['timestamp']] = data['StateChange']
-      @states += [data['timestamp'], data['StateChange']]
+      @container_states[data['timestamp']] = data['StateChange']
       ##########
     elsif data['message'].include?('Created localizer')
       @data['localizer_created_at'] = data['timestamp']
     elsif data.has_key? 'ProcessTreeID'
       # @resource_usage[data['timestamp']] = HadoopContainerResourceUsage.new(data['timestamp'], data['ProcessTreeID'], data['UsedPysicalMemory'], data['AvailablePhysicalMemory'], data['UsedVirtualMemory'], data['AvailableVirtualMemory'])
       ##########
-      @resource_usage += [data['timestamp'], data['ProcessTreeID'], data['UsedPysicalMemory'], data['AvailablePhysicalMemory'], data['UsedVirtualMemory'], data['AvailableVirtualMemory']]
+      @resource_usage[data['timestamp']] = [data['ProcessTreeID'], data['UsedPysicalMemory'], data['AvailablePhysicalMemory'], data['UsedVirtualMemory'], data['AvailableVirtualMemory']]
       ##########
     elsif data['message'].include?('succeeded')
       @data['succeeded_at'] = data['timestamp']
@@ -85,13 +85,7 @@ class HadoopContainer < HadoopBase
   def to_db
 
     node
-
     node.update_props(@data)
-
-    node[:states] +=@container_states
-    node[:events] += @events
-    node[:state_changes] += @states
-    node[:resource_usage] += @resource_usage
 
     query = " merge (e#{@id}:container {id: '#{@id}'}) "
     unless @host.nil?
@@ -127,6 +121,26 @@ class HadoopContainer < HadoopBase
 
   def csv_header
     'id,start_request_time,localizer_created_at,succeeded_at,clean_up_time,capacity,added_to_app_at,removed_from_app,stopped_at,started_at,arguments,host,username,queue'
+  end
+
+  def container_states_to_csv
+    string = ''
+    unless @container_states.empty?
+      @container_states.each { |k, v|
+        string += "#{@id},#{k},#{v}\n"
+      }
+    end
+    string
+  end
+
+  def resource_usage_to_csv
+    string = ''
+    unless @resource_usage.empty?
+      @resource_usage.each { |k, v|
+        string += "#{@id},#{k},#{v[0]},#{v[1]},#{v[2]},#{v[3]},#{v[4]}\n"
+      }
+    end
+    string
   end
 
 end
