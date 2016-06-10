@@ -23,7 +23,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   # config :fields, :validate => :array, :required => true
   #:fields
   config :path, :validate => :string, :required => true
-  config :flush, :validate => :number, :required => false
+  config :flush_interval, :validate => :number, :required => false
   config :import_mode, :required => false
 
   # configuration for the neo4j graph db
@@ -32,7 +32,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   config :neo4j_password, :validate => :string, :required => true
 
   # defaults
-  default :flush, '300'
+  default :flush_interval, '300'
   default :codec, 'json_lines'
   default :import_mode, false
 
@@ -118,6 +118,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     # open(path + 'events.txt', 'a') { |f|
     #   f.puts data
     # }
+    data['timestamp'] = data['timestamp'].gsub(',', '.')
 
 
     if data.has_key? ('ContainerID')
@@ -204,7 +205,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
-    if @count % 100000 == 0
+    if @count % 10000 == 0 || time_difference >= @flush_interval
 
       if @available_threads.count > 0
         @available_threads.decrement!
@@ -305,27 +306,30 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       File.open(path + 'block_states.csv', 'a') { |i|
         File.open(path + 'block_source_hosts.csv', 'a') { |g|
           File.open(path + 'block_destination_hosts.csv', 'a') { |h|
-            blocks.each { |k, v|
-              f.puts v.to_csv
-              g.puts v.source_hosts_to_csv
-              h.puts v.dest_hosts_to_csv
-              i.puts v.states_to_csv
+            File.open(path + 'block_replica_states.csv', 'a') { |e|
+              blocks.each { |k, v|
+                unless_empty? f, v.to_csv
+                unless_empty? g, v.source_hosts_to_csv
+                unless_empty? h, v.dest_hosts_to_csv
+                unless_empty? i, v.states_to_csv
+                unless_empty? e, v.replica_states_to_csv
+              }
             }
           }
         }
       }
     }
     File.open(path + 'containers.csv', 'a') { |f|
-      File.open(path + 'container_states.csv', 'a') { |g|
+      File.open(path + 'container_states.csv', 'a') { |i|
         File.open(path + 'container_resource_usage.csv', 'a') { |h|
-          File.open(path + 'container_state_transitions.csv', 'a') { |i|
+          File.open(path + 'container_state_transitions.csv', 'a') { |g|
             File.open(path + 'container_events.csv', 'a') { |j|
               containers.each { |k, v|
-                f.puts v.to_csv
-                g.puts v.container_states_to_csv
-                h.puts v.resource_usage_to_csv
-                i.puts v.states_to_csv
-                j.puts v.events_to_csv
+                unless_empty? f, v.to_csv
+                unless_empty? g, v.container_states_to_csv
+                unless_empty? h, v.resource_usage_to_csv
+                unless_empty? i, v.states_to_csv
+                unless_empty? j, v.events_to_csv
               }
             }
           }
@@ -337,10 +341,10 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         File.open(path + 'app_attempt_states.csv', 'a') { |i|
           File.open(path + 'app_attempt_events.csv', 'a') { |j|
             app_attempts.each { |k, v|
-              f.puts v.to_csv
-              g.puts v.to_csv2
-              i.puts v.states_to_csv
-              j.puts v.events_to_csv
+              unless_empty? f, v.to_csv
+              unless_empty? g, v.to_csv2
+              unless_empty? i, v.states_to_csv
+              unless_empty? j, v.events_to_csv
             }
           }
         }
@@ -352,11 +356,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           File.open(path + 'apps_states.csv', 'a') { |i|
             File.open(path + 'apps_events.csv', 'a') { |j|
               apps.each { |k, v|
-                f.puts v.to_csv
-                g.puts v.to_csv2
-                h.puts v.to_csv3
-                i.puts v.states_to_csv
-                j.puts v.events_to_csv
+                unless_empty? f, v.to_csv
+                unless_empty? g, v.to_csv2
+                unless_empty? h, v.to_csv3
+                unless_empty? i, v.states_to_csv
+                unless_empty? j, v.events_to_csv
               }
             }
           }
@@ -371,6 +375,12 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         }
       }
     }
+  end
+
+  def unless_empty?(file, string)
+    unless string == ''
+      file.puts string
+    end
   end
 
   def to_csv_headers(jobs, apps, app_attempts, containers, blocks)
@@ -487,10 +497,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     else
       flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
     end
-
     @logger.info('writing to disk completed, shutting down', :plugin => self)
-
-    @session.close
   end
 
 end # class LogStash::Outputs::ProvenanceGraph
