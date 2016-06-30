@@ -15,9 +15,9 @@ class HadoopContainer < HadoopBase
     @data = ThreadSafe::Hash.new
     @data[:state_changes] = []
     @data[:resource_usage] = []
-    @data['start_request_time'] = @data['localizer_created_at'] = @data['succeeded_at'] = @data['clean_up_time'] = @data['capacity'] =
-        @data['added_to_app_at'] = @data['removed_from_app'] = @data['stopped_at'] = @data['started_at']= @data['arguments'] =
-            @host = @username = @queue = ''
+    # @data['start_request_time'] = @data['localizer_created_at'] = @data['succeeded_at'] = @data['clean_up_time'] = @data['capacity'] =
+    #     @data['added_to_app_at'] = @data['removed_from_app'] = @data['stopped_at'] = @data['started_at']= @data['arguments'] =
+    #         @host = @username = @queue = ''
   end
 
   def parse_data (data)
@@ -88,7 +88,7 @@ class HadoopContainer < HadoopBase
     node.update_props(@data)
 
     query = " merge (e#{@id}:container {id: '#{@id}'}) "
-    unless @host.nil?
+    unless @host == '' || @path.nil?
       # h = get_create_host(@host)
       # rel = node.rels(dir: :outgoing, between: h)
       # if rel.length == 0
@@ -98,7 +98,7 @@ class HadoopContainer < HadoopBase
       query += "merge (f#{s(@host+@id)}:host {name: '#{@host}'}) create unique (e#{@id})-[:hosted_on]->(f#{s(@host+@id)}) "
     end
 
-    unless @username.nil?
+    unless @username == '' || @username.nil?
       # user = get_create_username(@username)
       # rel = node.rels(dir: :outgoing, between: user)
       # if rel.length == 0
@@ -110,18 +110,76 @@ class HadoopContainer < HadoopBase
     query
   end
 
-  def to_csv
+  def to_csv(path)
+    unless @username.nil?
+    File.open(path + 'container_user.csv', 'a') { |f|
+      f.puts @id +','+ @username +','+ @data['start_request_time']
+    }
+    end
+    if @data.has_key? 'localizer_created_at'
+    File.open(path + 'container_localizer_created.csv', 'a') { |f|
+      f.puts @id +','+  @data['localizer_created_at']
+    }
+    end
+    if @data.has_key? 'succeeded_at'
+      File.open(path + 'container_succeeded_at.csv', 'a') { |f|
+        f.puts @id +','+  @data['succeeded_at']
+      }
+    end
+    if @data.has_key? 'clean_up_time'
+      File.open(path + 'container_clean_up_time.csv', 'a') { |f|
+        f.puts @id +','+  @data['clean_up_time']
+      }
+    end
+    if @data.has_key? 'added_to_app_at'
+      File.open(path + 'container_added_to_app_at.csv', 'a') { |f|
+        f.puts @id +','+  @data['added_to_app_at']
+      }
+    end
+    if @data.has_key? 'removed_from_app'
+      File.open(path + 'container_removed_from_app.csv', 'a') { |f|
+        f.puts @id +','+  @data['removed_from_app']
+      }
+    end
+    if @data.has_key? 'stopped_at'
+      File.open(path + 'container_stopped_at.csv', 'a') { |f|
+        f.puts @id +','+  @data['stopped_at']
+      }
+    end
+    if @data.has_key? 'started_at'
+      File.open(path + 'container_started_at.csv', 'a') { |f|
+        f.puts @id +','+  @data['started_at']+','+  @data['arguments']
+      }
+    end
+    if @data.has_key? 'capacity' && @host != nil
+      File.open(path + 'container_host.csv', 'a') { |f|
+        f.puts @id +','+  @data['capacity'] +','+@host
+      }
+    end
 
-    @id +','+ @data['start_request_time'] +','+ @data['localizer_created_at'] +','+ @data['succeeded_at'] +','+ @data['clean_up_time'] +
-        ','+ @data['capacity'] +','+ @data['added_to_app_at'] +','+ @data['removed_from_app'] +','+ @data['stopped_at'] +
-        ','+ @data['started_at'] +','+ @data['arguments'] +
-        ','+@host +','+ @username +','+ @queue
+    unless @states.empty?
+      File.open(path + 'container_states.csv', 'a') { |i|
+        i.puts states_to_csv
+      }
+    end
+    unless @events.empty?
+      File.open(path + 'container_events.csv', 'a') { |j|
+        j.puts events_to_csv
+      }
+    end
+    unless @resource_usage.empty?
+      File.open(path + 'container_resource_usage.csv', 'a') { |h|
+        h.puts resource_usage_to_csv
+      }
+    end
+    unless @container_states.empty?
+      File.open(path + 'container_state_transitions.csv', 'a') { |g|
+        g.puts container_states_to_csv
+      }
+    end
+
   end
 
-
-  def csv_header
-    'id,start_request_time,localizer_created_at,succeeded_at,clean_up_time,capacity,added_to_app_at,removed_from_app,stopped_at,started_at,arguments,host,username,queue'
-  end
 
   def container_states_to_csv
     string = ''

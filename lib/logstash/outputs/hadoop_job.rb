@@ -31,10 +31,10 @@ class HadoopJob < HadoopBase
     @applications = []
     @job_summary = false
     @data = ThreadSafe::Hash.new
-    @data['submit_time'] = @data['launch_time'] = @data['first_map_task_launch_time'] = @data['first_reduce_task_launch_time'] =
-        @data['finish_time'] = @data['resources_per_map'] = @data['resources_per_reduce'] = @data['num_maps'] =
-        @data['num_reduces'] = @data['job_status'] = @data['map_slot_seconds'] = @data['reduce_slot_seconds'] =
-        @data['job_name'] = @username = @queue = ''
+    # @data['submit_time'] = @data['launch_time'] = @data['first_map_task_launch_time'] = @data['first_reduce_task_launch_time'] =
+    #     @data['finish_time'] = @data['resources_per_map'] = @data['resources_per_reduce'] = @data['num_maps'] =
+    #         @data['num_reduces'] = @data['job_status'] = @data['map_slot_seconds'] = @data['reduce_slot_seconds'] =
+    #             @data['job_name'] = @username = @queue = ''
   end
 
 
@@ -142,7 +142,7 @@ class HadoopJob < HadoopBase
 
     # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:application {id: '#{app_id}'}) create unique (j)-[:has]->(u)")
 
-    unless @username.nil?
+    unless @username == '' || @username.nil?
       # user = get_create_username(@username)
       # rel = node.rels(dir: :outgoing, between: user)
       # if rel.length == 0
@@ -153,7 +153,7 @@ class HadoopJob < HadoopBase
     end
 
 
-    unless @queue.nil?
+    unless @queue == '' || @queue.nil?
       # q = get_create_queue(@queue)
       # rel = node.rels(dir: :outgoing, between: q)
       # if rel.length == 0
@@ -167,18 +167,33 @@ class HadoopJob < HadoopBase
 
   end
 
-  def to_csv
+  def to_csv(path)
+    if @job_summary
+      File.open(path + 'jobs.csv', 'a') { |f|
 
-    @id +','+ @data['submit_time'] +','+ @data['launch_time'] +','+ @data['first_map_task_launch_time'] +','+ @data['first_reduce_task_launch_time'] +
-        ','+ @data['finish_time'] +','+ @data['resources_per_map'] +','+ @data['resources_per_reduce'] +','+ @data['num_maps'] +
-        ','+ @data['num_reduces'] +','+ @data['job_status'] +','+ @data['map_slot_seconds'] +','+ @data['reduce_slot_seconds'] +
-        ','+ @data['job_name'] +','+ @username +','+ @queue
+        f.puts @id +','+ @data['submit_time'] +','+ @data['launch_time'] +','+ @data['first_map_task_launch_time'] +','+ @data['first_reduce_task_launch_time'] +
+                   ','+ @data['finish_time'] +','+ @data['resources_per_map'] +','+ @data['resources_per_reduce'] +','+ @data['num_maps'] +
+                   ','+ @data['num_reduces'] +','+ @data['job_status'] +','+ @data['map_slot_seconds'] +','+ @data['reduce_slot_seconds'] +
+                   ','+ @data['job_name'] +','+ @username +','+ @queue
+      }
+    end
+    unless @applications.empty?
+      File.open(path + 'jobs_apps.csv', 'a') { |g|
+        g.puts to_csv2
+      }
+    end
+
+
+    # @id +','+ @data['submit_time'] +','+ @data['launch_time'] +','+ @data['first_map_task_launch_time'] +','+ @data['first_reduce_task_launch_time'] +
+    #     ','+ @data['finish_time'] +','+ @data['resources_per_map'] +','+ @data['resources_per_reduce'] +','+ @data['num_maps'] +
+    #     ','+ @data['num_reduces'] +','+ @data['job_status'] +','+ @data['map_slot_seconds'] +','+ @data['reduce_slot_seconds'] +
+    #     ','+ @data['job_name'] +','+ @username +','+ @queue
   end
 
   def to_csv2
     string = ''
     @applications.each { |app_id|
-      string +=  @id +','+ app_id + "\n"
+      string += @id +','+ app_id + "\n"
     }
     string
 
@@ -186,6 +201,10 @@ class HadoopJob < HadoopBase
 
   def csv_header
     'id,submit_time,launch_time,first_map_task_launch_time,first_reduce_task_launch_time,finish_time,resources_per_map,resources_per_reduce,num_maps,num_reduces,job_status,map_slot_seconds,reduce_slot_seconds,job_name,username,queue'
+  end
+
+  def get_apps
+    @applications
   end
 
 end

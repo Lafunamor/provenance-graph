@@ -13,8 +13,8 @@ class HadoopAppAttempt < HadoopBase
     @events = ThreadSafe::Hash.new
     @containers = []
     @data = ThreadSafe::Hash.new
-    @data['final_state'] = @data['end_time'] = @data['host_http_adr'] = @data['resource'] = @data['priority'] = @data['token'] =
-        @host = @username = @queue = @master_container = ''
+    # @data['final_state'] = @data['end_time'] = @data['host_http_adr'] = @data['resource'] = @data['priority'] = @data['token'] =
+    #     @host = @username = @master_container = ''
   end
 
   def add_container(container_id)
@@ -98,7 +98,7 @@ class HadoopAppAttempt < HadoopBase
     }
 
 
-    unless @master_container.nil?
+    unless @master_container == '' || @master_container.nil?
       # master_host = get_create_container(@master_container)
       # rel = node.rels(dir: :outgoing, between: master_host)
       # if rel.length == 0
@@ -112,7 +112,7 @@ class HadoopAppAttempt < HadoopBase
       end
     end
 
-    unless @host.nil?
+    unless @host == '' || @host.nil?
       # h = get_create_host(@host)
       # rel = node.rels(dir: :outgoing, between: h)
       # if rel.length == 0
@@ -125,11 +125,27 @@ class HadoopAppAttempt < HadoopBase
 
   end
 
-  def to_csv
-
-    @id +','+ @data['final_state'] +','+ @data['end_time'] +','+ @data['host_http_adr'] +','+ @data['resource'] +
-        ','+ @data['priority'] +','+ @data['token'] +
-        ','+ @host +','+ @username +','+ @queue + ','+@master_container
+  def to_csv(path)
+    unless @master_container.nil? || @data.has_key?('final_state')
+    File.open(path + 'app_attempt_summary.csv', 'a') { |f|
+      f.puts "#{@id},#{@data['final_state']},#{@data['end_time']},#{@data['host_http_adr']},#{@data['resource']},#{@data['priority']},#{@data['token']},#{@host},#{@master_container}"
+    }
+    end
+    unless @containers.empty?
+      File.open(path + 'attempts_containers.csv', 'a') { |g|
+        g.puts to_csv2
+      }
+    end
+    unless @states.empty?
+      File.open(path + 'app_attempt_states.csv', 'a') { |i|
+        i.puts states_to_csv
+      }
+    end
+    unless @events.empty?
+      File.open(path + 'app_attempt_events.csv', 'a') { |j|
+        j.puts events_to_csv
+      }
+    end
   end
 
   def to_csv2
@@ -142,7 +158,10 @@ class HadoopAppAttempt < HadoopBase
   end
 
   def csv_header
-    'id,final_state,end_time,host_http_adr,resource,priority,token,host,username,queue,master_container'
+    'id,final_state,end_time,host_http_adr,resource,priority,token,host,master_container'
   end
 
+  def get_containers
+    @containers
+  end
 end

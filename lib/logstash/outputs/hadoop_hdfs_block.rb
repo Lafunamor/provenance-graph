@@ -11,7 +11,8 @@ class HadoopHDFSBlock < HadoopBase
     @data = ThreadSafe::Hash.new
     @source_host = ThreadSafe::Hash.new
     @destination_host = ThreadSafe::Hash.new
-    @data['namespace'] = @path = @username = @queue = ''
+    @data['namespace'] = @username = @queue = ''
+    @path = ''
   end
 
   def parse_data(data)
@@ -97,42 +98,71 @@ class HadoopHDFSBlock < HadoopBase
 
     query = " merge (aa#{@id}:block {id: '#{@id}'})  "
 
-    unless @path.nil?
+    unless @path == '' || @path.nil?
       # Neo4j::Session.current.query("merge (b:file {name: '#{@path}'}) create unique (a#{@id})-[:belongs_to]->(b)")
-      query += "merge (bb#{s(@path)}:file {name: '#{@path}'}) create unique (aa#{@id})-[:belongs_to]->(bb#{s(@path)}) "
+      query += "merge (path_#{s(@path)}_#{@id}:file {name: '#{@path}'}) create unique (aa#{@id})-[:belongs_to]->(path_#{s(@path)}_#{@id}) "
     end
 
 
-    @source_host.each { |timestamp,host|
+    @source_host.each { |timestamp, host|
       # source_host = get_create_host(host)
       # rel = node.rels(dir: :outgoing, between: source_host)
       # if rel.length == 0
       #   @node.create_rel(:source_host, source_host)
       # end
       # Neo4j::Session.current.query(" merge (b:host {name: '#{host}'}) create unique (a#{@id})-[:source_host]->(b)")
-      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:source_host {timestamp: #{timestamp}}]->(bb#{s(host+@id)}) "
+      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:source_host {timestamp: '#{timestamp}'}]->(bb#{s(host+@id)}) "
     }
-    @destination_host.each { |timestamp,host|
+    @destination_host.each { |timestamp, host|
       # dest_host = get_create_host(host)
       # rel = node.rels(dir: :outgoing, between: dest_host)
       # if rel.length == 0
       #   @node.create_rel(:destination_host, dest_host)
       # end
       # Neo4j::Session.current.query(" merge (b:host {name: '#{host}'}) create unique (a#{@id})-[:destination_host]->(b)")
-      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:destination_host {timestamp: #{timestamp}}]->(bb#{s(host+@id)}) "
+      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:destination_host {timestamp: '#{timestamp}'}]->(bb#{s(host+@id)}) "
     }
     query
 
   end
 
-  def to_csv
-    @id +','+ @data['namespace'] +','+ @path +','+ @username +','+ @queue
+  def to_csv(path)
+    if @data.has_key? 'namespace'
+    File.open(path + 'blocks.csv', 'a') { |f|
+      f.puts @id +','+ @data['namespace'] +','+ @path
+    }
+    end
+    if @data.has_key? 'size'
+      File.open(path + 'block_size.csv', 'a') { |f|
+        f.puts @id +','+ @data['size']
+      }
+    end
+    unless @states.empty?
+      File.open(path + 'block_states.csv', 'a') { |i|
+        i.puts states_to_csv
+      }
+    end
+    unless @source_host.empty?
+      File.open(path + 'block_source_hosts.csv', 'a') { |g|
+        g.puts source_hosts_to_csv
+      }
+    end
+    unless @destination_host.empty?
+      File.open(path + 'block_destination_hosts.csv', 'a') { |h|
+        h.puts dest_hosts_to_csv
+      }
+    end
+    unless @replica.empty?
+      File.open(path + 'block_replica_states.csv', 'a') { |e|
+        e.puts replica_states_to_csv
+      }
+    end
   end
 
   def source_hosts_to_csv
     string = ''
     unless @source_host.empty?
-      @source_host.each { |timestamp,host|
+      @source_host.each { |timestamp, host|
         string += "#{@id},#{host},#{timestamp}\n"
       }
     end
@@ -142,7 +172,7 @@ class HadoopHDFSBlock < HadoopBase
   def dest_hosts_to_csv
     string = ''
     unless @destination_host.empty?
-      @destination_host.each { |timestamp,host|
+      @destination_host.each { |timestamp, host|
         string += "#{@id},#{host},#{timestamp}\n"
       }
     end
@@ -152,7 +182,7 @@ class HadoopHDFSBlock < HadoopBase
   def replica_states_to_csv
     string = ''
     unless @replica.empty?
-      @replica.each{|k,v|
+      @replica.each { |k, v|
         string += "#{@id},#{k},#{v[0]},#{v[1]},#{v[2]},#{v[3]}\n"
       }
     end
@@ -163,4 +193,7 @@ class HadoopHDFSBlock < HadoopBase
     'id,namespace,path,username,queue'
   end
 
+  def enough_data?
+    @data['namespace'] != '' && @path != ''
+  end
 end

@@ -36,14 +36,19 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   default :codec, 'json_lines'
   default :import_mode, false
 
-  # declare_threadsafe!
+  declare_threadsafe!
 
   public
   def register
     @logger.debug('starting', :plugin => self)
     @count = 0
     @logger.debug('loading data', :plugin => self)
-    @available_threads = SynchronizedCounter.new 10
+    if @import_mode
+      @available_threads = SynchronizedCounter.new 1
+    else
+      @available_threads = SynchronizedCounter.new 10
+    end
+
     # deserialize
     # if @jobs.nil? || @jobs == false
     @jobs = ThreadSafe::Hash.new
@@ -81,24 +86,17 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         # # /var/lib/neo4j/data/
         # @session = Neo4j::Session.open(:ha_db, '/var/lib/neo4j/data/', auto_commit: true)
         # @session.start
-        # Neo4j::Label.create(:job).create_index(:id)
         @session.query('Create CONSTRAINT ON (n:job) ASSERT n.id IS UNIQUE')
-        # Neo4j::Label.create(:application).create_index(:id)
         @session.query('Create CONSTRAINT ON (n:application) ASSERT n.id IS UNIQUE')
-        # Neo4j::Label.create(:attempt).create_index(:id)
         @session.query('Create CONSTRAINT ON (n:attempt) ASSERT n.id IS UNIQUE')
-        # Neo4j::Label.create(:container).create_index(:id)
         @session.query('Create CONSTRAINT ON (n:container) ASSERT n.id IS UNIQUE')
-        # Neo4j::Label.create(:block).create_index(:id)
         @session.query('Create CONSTRAINT ON (n:block) ASSERT n.id IS UNIQUE')
-        # Neo4j::Label.create(:file).create_index(:name)
         @session.query('Create CONSTRAINT ON (n:file) ASSERT n.name IS UNIQUE')
-        # Neo4j::Label.create(:queue).create_index(:name)
         @session.query('Create CONSTRAINT ON (n:queue) ASSERT n.name IS UNIQUE')
-        # Neo4j::Label.create(:host).create_index(:name)
         @session.query('Create CONSTRAINT ON (n:host) ASSERT n.name IS UNIQUE')
-        # Neo4j::Label.create(:user).create_index(:username)
         @session.query('Create CONSTRAINT ON (n:user) ASSERT n.username IS UNIQUE')
+        @session.query('Create CONSTRAINT ON (n:state) ASSERT n.name IS UNIQUE')
+        @session.query('Create CONSTRAINT ON (n:event) ASSERT n.name IS UNIQUE')
 
       rescue
         @logger.error('Error: DB is locked', :plugin => self)
@@ -205,7 +203,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
-    if @count % 10000 == 0 || time_difference >= @flush_interval
+    if @count % 1000 == 0 || time_difference >= @flush_interval
 
       if @available_threads.count > 0
         @available_threads.decrement!
@@ -229,6 +227,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           else
             flush_to_db(jobs, apps, app_attempts, containers, blocks)
           end
+          # remove_old_data(jobs, blocks)
           end_time = Time.now
           open(path + 'count_return.txt', 'w') { |f|
             f.puts 'written ' + end_time.to_s
@@ -287,94 +286,130 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     query = ""
     blocks.each { |k, v| query += " " + v.to_db }
     # Neo4j::Session.current.query(query)
-
+    # query = ""
     containers.each { |k, v| query += " " + v.to_db }
     # Neo4j::Session.current.query(query)
-
+    # query = ""
     app_attempts.each { |k, v| query += " " + v.to_db }
     # Neo4j::Session.current.query(query)
-
+    # query = ""
     apps.each { |k, v| query += " " + v.to_db }
     # Neo4j::Session.current.query(query)
-
+    # query = ""
     jobs.each { |k, v| query += " " + v.to_db }
     Neo4j::Session.current.query(query)
   end
 
   def to_csv(jobs, apps, app_attempts, containers, blocks)
-    File.open(path + 'blocks.csv', 'a') { |f|
-      File.open(path + 'block_states.csv', 'a') { |i|
-        File.open(path + 'block_source_hosts.csv', 'a') { |g|
-          File.open(path + 'block_destination_hosts.csv', 'a') { |h|
-            File.open(path + 'block_replica_states.csv', 'a') { |e|
-              blocks.each { |k, v|
-                unless_empty? f, v.to_csv
-                unless_empty? g, v.source_hosts_to_csv
-                unless_empty? h, v.dest_hosts_to_csv
-                unless_empty? i, v.states_to_csv
-                unless_empty? e, v.replica_states_to_csv
-              }
-            }
-          }
-        }
-      }
+    jobs.each { |k, v|
+      v.to_csv(path)
     }
-    File.open(path + 'containers.csv', 'a') { |f|
-      File.open(path + 'container_states.csv', 'a') { |i|
-        File.open(path + 'container_resource_usage.csv', 'a') { |h|
-          File.open(path + 'container_state_transitions.csv', 'a') { |g|
-            File.open(path + 'container_events.csv', 'a') { |j|
-              containers.each { |k, v|
-                unless_empty? f, v.to_csv
-                unless_empty? g, v.container_states_to_csv
-                unless_empty? h, v.resource_usage_to_csv
-                unless_empty? i, v.states_to_csv
-                unless_empty? j, v.events_to_csv
-              }
-            }
-          }
-        }
-      }
+    apps.each { |k, v|
+      v.to_csv(path)
     }
-    File.open(path + 'app_attempts.csv', 'a') { |f|
-      File.open(path + 'attempts_containers.csv', 'a') { |g|
-        File.open(path + 'app_attempt_states.csv', 'a') { |i|
-          File.open(path + 'app_attempt_events.csv', 'a') { |j|
-            app_attempts.each { |k, v|
-              unless_empty? f, v.to_csv
-              unless_empty? g, v.to_csv2
-              unless_empty? i, v.states_to_csv
-              unless_empty? j, v.events_to_csv
-            }
-          }
-        }
-      }
+    app_attempts.each { |k, v|
+      v.to_csv(path)
     }
-    File.open(path + 'apps.csv', 'a') { |f|
-      File.open(path + 'apps_attempts.csv', 'a') { |g|
-        File.open(path + 'apps_blocks.csv', 'a') { |h|
-          File.open(path + 'apps_states.csv', 'a') { |i|
-            File.open(path + 'apps_events.csv', 'a') { |j|
-              apps.each { |k, v|
-                unless_empty? f, v.to_csv
-                unless_empty? g, v.to_csv2
-                unless_empty? h, v.to_csv3
-                unless_empty? i, v.states_to_csv
-                unless_empty? j, v.events_to_csv
-              }
-            }
-          }
-        }
-      }
+    containers.each { |k, v|
+      v.to_csv(path)
     }
-    File.open(path + 'jobs.csv', 'a') { |f|
-      File.open(path + 'jobs_apps.csv', 'a') { |g|
-        jobs.each { |k, v|
-          f.puts v.to_csv
-          g.puts v.to_csv2
-        }
-      }
+    blocks.each { |k, v|
+      v.to_csv(path)
     }
+
+    # jobs = apps = app_attempts = containers = blocks = []
+    # jobs_copy.each { |key, value|
+    #   if value.has_job_summary?
+    #     jobs += value
+    #   end
+    # }
+    # jobs.each { |job|
+    #   apps += job.get_apps
+    # }
+    # apps.each { |app|
+    #   app_attempts += app.get_attempts
+    # }
+    # app_attempts.each { |attempt|
+    #   containers += attempt.get_containers
+    # }
+    # blocks_copy.each { |k, v|
+    #   if v.enough_data?
+    #     blocks += [v]
+    #   end
+    # }
+    # File.open(path + 'blocks.csv', 'a') { |f|
+    #   File.open(path + 'block_states.csv', 'a') { |i|
+    #     File.open(path + 'block_source_hosts.csv', 'a') { |g|
+    #       File.open(path + 'block_destination_hosts.csv', 'a') { |h|
+    #         File.open(path + 'block_replica_states.csv', 'a') { |e|
+    #           blocks.each { |k, v|
+    #             unless_empty? f, v.to_csv
+    #             unless_empty? g, v.source_hosts_to_csv
+    #             unless_empty? h, v.dest_hosts_to_csv
+    #             unless_empty? i, v.states_to_csv
+    #             unless_empty? e, v.replica_states_to_csv
+    #           }
+    #         }
+    #       }
+    #     }
+    #   }
+    # }
+    # File.open(path + 'containers.csv', 'a') { |f|
+    # File.open(path + 'container_states.csv', 'a') { |i|
+    #   File.open(path + 'container_resource_usage.csv', 'a') { |h|
+    # File.open(path + 'container_state_transitions.csv', 'a') { |g|
+    # File.open(path + 'container_events.csv', 'a') { |j|
+    #           containers.each { |v|
+    #             unless_empty? f, v.to_csv
+    #             unless_empty? g, v.container_states_to_csv
+    #             unless_empty? h, v.resource_usage_to_csv
+    #             unless_empty? i, v.states_to_csv
+    #             unless_empty? j, v.events_to_csv
+    #           }
+    #         }
+    #       }
+    #     }
+    #   }
+    # }
+    # File.open(path + 'app_attempts.csv', 'a') { |f|
+    #   File.open(path + 'attempts_containers.csv', 'a') { |g|
+    #     File.open(path + 'app_attempt_states.csv', 'a') { |i|
+    #       File.open(path + 'app_attempt_events.csv', 'a') { |j|
+    #         app_attempts.each { |v|
+    #           unless_empty? f, v.to_csv
+    #           unless_empty? g, v.to_csv2
+    #           unless_empty? i, v.states_to_csv
+    #           unless_empty? j, v.events_to_csv
+    #         }
+    #       }
+    #     }
+    #   }
+    # }
+    # File.open(path + 'apps.csv', 'a') { |f|
+    #   File.open(path + 'apps_attempts.csv', 'a') { |g|
+    #     File.open(path + 'apps_blocks.csv', 'a') { |h|
+    #       File.open(path + 'apps_states.csv', 'a') { |i|
+    #         File.open(path + 'apps_events.csv', 'a') { |j|
+    #           apps.each { |v|
+    #             unless_empty? f, v.to_csv
+    #             unless_empty? g, v.to_csv2
+    #             unless_empty? h, v.to_csv3
+    #             unless_empty? i, v.states_to_csv
+    #             unless_empty? j, v.events_to_csv
+    #           }
+    #         }
+    #       }
+    #     }
+    #   }
+    # }
+    # File.open(path + 'jobs.csv', 'a') { |f|
+    #   File.open(path + 'jobs_apps.csv', 'a') { |g|
+    #     jobs.each { |v|
+    #       f.puts v.to_csv
+    #       g.puts v.to_csv2
+    #     }
+    #   }
+    # }
   end
 
   def unless_empty?(file, string)
@@ -415,18 +450,48 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   end
 
 
-  def remove_old_data
-    @jobs = ThreadSafe::Hash.new
-    @applications = ThreadSafe::Hash.new
-    @app_attempts = ThreadSafe::Hash.new
-    @containers = ThreadSafe::Hash.new
-    @blocks = ThreadSafe::Hash.new
-    # @jobs.delete_if { |key, value| value.has_job_summary? }
+  def remove_old_data#(jobs_copy, blocks_copy)
+    # if @import_mode
+    #   jobs = apps = app_attempts = containers = blocks = []
+    #   jobs_copy.each { |key, value|
+    #     if value.has_job_summary?
+    #       jobs += value
+    #     end
+    #   }
+    #   jobs.each { |job|
+    #     apps += job.get_apps
+    #   }
+    #   apps.each { |app|
+    #     app_attempts += app.get_attempts
+    #   }
+    #   app_attempts.each { |attempt|
+    #     containers += attempt.get_containers
+    #   }
+    #   blocks_copy.each { |k, v|
+    #     if v.enough_data?
+    #       blocks += [v]
+    #     end
+    #   }
+    #   @jobs.delete_if { |k, v| jobs.include? v }
+    #   @applications.delete_if { |k, v| apps.include? v }
+    #   @app_attempts.delete_if { |k, v| app_attempts.include? v }
+    #   @containers.delete_if { |k, v| containers.include? v }
+    #
+    #   # @jobs.delete_if { |key, value| value.has_job_summary? }
+    #   @blocks.delete_if { |k, v| blocks.include? v }
+    # else
+      @jobs = ThreadSafe::Hash.new
+      @applications = ThreadSafe::Hash.new
+      @app_attempts = ThreadSafe::Hash.new
+      @containers = ThreadSafe::Hash.new
+      @blocks = ThreadSafe::Hash.new
+    # end
+
     # @jobs.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
     # @applications.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
     # @app_attempts.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
     # @containers.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
-    # @blocks.delete_if { |key, value| @last_flush - value.last_edited >= 120 }
+
   end
 
 
@@ -494,6 +559,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @logger.info('clean shutdown, flushing data', :plugin => self)
     if @import_mode
       to_csv(@jobs, @applications, @app_attempts, @containers, @blocks)
+      # to_csv(@jobs, @blocks)
     else
       flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
     end

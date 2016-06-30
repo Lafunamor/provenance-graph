@@ -22,10 +22,10 @@ class HadoopApplication < HadoopBase
     # @app_attempts = Hash.new
     @app_attempts = []
     @data = ThreadSafe::Hash.new
-    @data['accepted_at'] = @data['unregistered_at'] = @data['stopping_at'] = @data['end_time'] = @data['removed_at'] =
-        @data['clean_up_local_disks'] = @data['app_state'] = @data['app_name'] = @data['finish_time'] =
-            @data['tracking_url'] = @data['port'] = @data['start_time'] = @data['final_state'] = @username =
-                @queue = @app_master_host = ''
+    # @data['accepted_at'] = @data['unregistered_at'] = @data['stopping_at'] = @data['end_time'] = @data['removed_at'] =
+    # @data['clean_up_local_disks'] = @data['app_state'] = @data['app_name'] = @data['finish_time'] =
+    # @data['tracking_url'] = @data['port'] = @data['start_time'] = @data['final_state'] = @username =
+    # @queue = @app_master_host = ''
   end
 
 
@@ -77,37 +77,37 @@ class HadoopApplication < HadoopBase
 
   def get_summary(data)
 
-    if data.has_key? 'State'
-      @data['app_state'] = data['State']
-    end
-    if data.has_key? 'UserName'
-      @username= data['UserName']
-    end
-    if data.has_key? 'Name'
-      @data['app_name'] = data['Name']
-    end
-    if data.has_key? 'queue'
-      @queue = data['queue']
-    end
-    if data.has_key? 'finishTime'
-      @data['finish_time'] = data['finishTime']
-    end
-    if data.has_key? 'TrackingURL'
-      @data['tracking_url'] = data['TrackingURL']
-    end
-    if data.has_key? 'port'
-      @data['port'] = data['port']
-    end
-    if data.has_key? 'AppMasterHost'
-      @app_master_host = data['AppMasterHost']
+    # if data.has_key? 'State'
+    @data['app_state'] = data['State']
+    # end
+    # if data.has_key? 'UserName'
+    @username= data['UserName']
+    # end
+    # if data.has_key? 'Name'
+    @data['app_name'] = data['Name']
+    # end
+    # if data.has_key? 'queue'
+    @queue = data['queue']
+    # end
+    # if data.has_key? 'finishTime'
+    @data['finish_time'] = data['finishTime']
+    # end
+    # if data.has_key? 'TrackingURL'
+    @data['tracking_url'] = data['TrackingURL']
+    # end
+    # if data.has_key? 'port'
+    #   @data['port'] = data['port']
+    # end
+    # if data.has_key? 'AppMasterHost'
+    @app_master_host = data['AppMasterHost']
 
-    end
-    if data.has_key? 'StartTime'
-      @data['start_time'] = data['StartTime']
-    end
-    if data.has_key? 'FinalStatus'
-      @data['final_state'] = data['FinalStatus']
-    end
+    # end
+    # if data.has_key? 'StartTime'
+    @data['start_time'] = data['StartTime']
+    # end
+    # if data.has_key? 'FinalStatus'
+    @data['final_state'] = data['FinalStatus']
+    # end
 
   end
 
@@ -117,8 +117,8 @@ class HadoopApplication < HadoopBase
       @block_ids+= [data['Block_ID']]
     end
     unless import_mode
-    Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:block {id: '#{data['Block_ID']}'}) create unique (a)-[r:#{data['operation']} {timestamp: #{data['timestamp']}}]->(b)")
-    # node.create_rel(data['operation'], block.node, timestamp: data['timestamp'])
+      Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:block {id: '#{data['Block_ID']}'}) create unique (a)-[r:#{data['operation']} {timestamp: #{data['timestamp']}}]->(b)")
+      # node.create_rel(data['operation'], block.node, timestamp: data['timestamp'])
     end
     return true
   end
@@ -151,8 +151,7 @@ class HadoopApplication < HadoopBase
     }
 
 
-
-    unless @username.nil?
+    unless @username == '' || @username.nil?
       # user = get_create_username(@username)
       # rel = node.rels(dir: :outgoing, between: user)
       # if rel.length == 0
@@ -162,7 +161,7 @@ class HadoopApplication < HadoopBase
       query += "merge (b#{@username+@id}:user {name: '#{@username}'}) create unique (a#{@id})-[:belongs_to]->(b#{@username+@id}) "
     end
 
-    unless @queue.nil?
+    unless @queue == '' || @queue.nil?
       # q = get_create_queue(@queue)
       # rel = node.rels(dir: :outgoing, between: q)
       # if rel.length == 0
@@ -172,7 +171,7 @@ class HadoopApplication < HadoopBase
       query += "merge (b#{@queue+@id}:queue {name: '#{@queue}'}) (a#{@id})-[:used_queue]->(b#{@queue+@id}) "
     end
 
-    unless @app_master_host.nil?
+    unless @app_master_host == '' || @app_master_host.nil?
       # h = get_create_host(@app_master_host)
       # rel = node.rels(dir: :outgoing, between: h)
       # if rel.length == 0
@@ -186,12 +185,35 @@ class HadoopApplication < HadoopBase
   end
 
 
-  def to_csv
+  def to_csv(path)
+    if @data.has_key?('app_state') && @data.has_key?('app_name') && @data.has_key?('finish_time')
+      File.open(path + 'app_summary.csv', 'a') { |f|
+        f.puts "#{@id},#{@data['app_state']},#{@data['app_name']},#{@data['finish_time']},#{@data['tracking_url']},#{@data['start_time']},#{@data['final_state']},#{@username},#{@queue},#{@app_master_host}"
+      }
+    end
+    # @id +','+ @data['accepted_at'] +','+ @data['unregistered_at'] +','+ @data['stopping_at'] +','+ @data['end_time'] +
+    #     ','+ @data['removed_at'] +','+ @data['clean_up_local_disks']
 
-    @id +','+ @data['accepted_at'] +','+ @data['unregistered_at'] +','+ @data['stopping_at'] +','+ @data['end_time'] +
-         ','+ @data['removed_at'] +','+ @data['clean_up_local_disks'] +','+ @data['app_state'] +','+ @data['app_name'] +
-         ','+ @data['finish_time'] +','+ @data['tracking_url'] +','+ @data['port'] +','+ @data['start_time'] +
-         ','+ @data['final_state'] +','+ @username +','+ @queue +','+ @app_master_host
+    unless @states.empty?
+      File.open(path + 'apps_states.csv', 'a') { |i|
+        i.puts states_to_csv
+      }
+    end
+    unless @events.empty?
+      File.open(path + 'apps_events.csv', 'a') { |j|
+        j.puts events_to_csv
+      }
+    end
+    unless @app_attempts.empty?
+      File.open(path + 'apps_attempts.csv', 'a') { |g|
+        g.puts to_csv2
+      }
+    end
+    unless @blocks.empty?
+      File.open(path + 'apps_blocks.csv', 'a') { |h|
+        h.puts to_csv3
+      }
+    end
   end
 
   def to_csv2
@@ -204,8 +226,8 @@ class HadoopApplication < HadoopBase
 
   def to_csv3
     string = ''
-    @block_ids.each { |block_id|
-      string += "#{@id},#{block_id}\n"
+    @blocks.each { |k, v|
+      string += "#{@id},#{k},#{v[1]},#{v[2]}\n"
     }
     string
   end
@@ -228,4 +250,7 @@ class HadoopApplication < HadoopBase
     'id,accepted_at,unregistered_at,stopping_at,end_time,removed_at,clean_up_local_disks,app_state,app_name,finish_time,tracking_url,port,start_time,final_state,username,queue,app_master_host'
   end
 
+  def get_attempts
+    @app_attempts
+  end
 end
