@@ -1,0 +1,31 @@
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/app_attempt_summary.csv' as line 
+with line
+
+MERGE (host:host {name: line[5]})
+MERGE (master:container {id: line[6]})
+MERGE (attempt:attempt {id: line[0]}) 
+	SET  
+		attempt.host_http_adr = line[1], 
+		attempt.resource = line[2], 
+		attempt.priority = line[3], 
+		attempt.token = line[4]
+
+
+CREATE UNIQUE (attempt)-[:master_container]->(master)
+CREATE UNIQUE (attempt)-[:hosted_on]->(host)
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/app_attempt_summary2.csv' as line 
+with line
+
+MERGE (attempt:attempt {id: line[0]}) 
+	SET 
+		attempt.final_state = line[1],
+		attempt.end_time = line[2]
+
+;
+

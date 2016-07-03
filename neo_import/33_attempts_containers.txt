@@ -1,0 +1,11 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/attempts_containers.csv' as line 
+with line
+
+
+MERGE (attempt:attempt {id: line[0]})
+MERGE (container:container {id: line[1]}) 
+
+
+CREATE UNIQUE (attempt)-[:has]->(container)
+;

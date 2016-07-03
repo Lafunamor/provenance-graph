@@ -1,0 +1,15 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/block_replica_states.csv' as line 
+with line
+
+MERGE (replica:block_replica {BlockUCState: line[2],
+		primaryNodeIndex: line[3],
+		replicas: line[4],
+		size: line[5]
+		})
+MERGE (a:block {id: line[0]}) 
+
+
+CREATE UNIQUE (a)-[:replica {timestamp: line[1]}]->(replica)
+
+;

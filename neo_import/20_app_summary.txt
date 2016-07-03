@@ -1,0 +1,21 @@
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/app_summary.csv' as line 
+with line
+MERGE (queue:queue {name: line[8] } )
+MERGE (user:user {name: line[7] } )
+MERGE (host:host {name: line[9]})
+MERGE (app:application {id: line[0]}) 
+	SET 
+		app.app_state = line[1],
+		app.app_name = line[2], 
+		app.finish_time = line[3], 
+		app.tracking_url = line[4], 
+		app.start_time = line[5], 
+		app.final_state = line[6]
+
+
+CREATE UNIQUE (app)-[:belongs_to]->(user)
+CREATE UNIQUE (app)-[:used_queue]->(queue)
+CREATE UNIQUE (app)-[:app_master]->(host)
+;

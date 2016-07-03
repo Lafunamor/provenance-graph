@@ -1,0 +1,11 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/apps_attempts.csv' as line 
+with line
+
+
+MERGE (attempt:attempt {id: line[1]})
+MERGE (a:application {id: line[0]}) 
+
+
+CREATE UNIQUE (a)-[:has]->(attempt)
+;

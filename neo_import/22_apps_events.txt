@@ -1,0 +1,11 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/apps_events.csv' as line 
+with line
+
+
+MERGE (event:event {name: line[2]})
+MERGE (a:application {id: line[0]}) 
+
+
+CREATE UNIQUE (a)-[:has {timestamp: line[1]}]->(event)
+;

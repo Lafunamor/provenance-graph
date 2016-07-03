@@ -1,0 +1,13 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/apps_blocks.csv' as line 
+with line
+
+
+MERGE (block:block {id: line[2]})
+MERGE (a:application {id: line[0]}) 
+
+
+
+FOREACH(ignoreMe IN CASE WHEN line[3]='HDFS_WRITE' THEN [1] ELSE [] END | 
+    CREATE UNIQUE (a)-[:HDFS_WRITE {timestamp: line[1]}]->(block) )
+;

@@ -1,0 +1,95 @@
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_user.csv' as line 
+with line
+
+MERGE (user:user {name: line[1]})
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.start_request_time = line[2]
+
+CREATE UNIQUE (container)-[:belongs_to]->(user)
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_localizer_created.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.localizer_created_at = line[1]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_succeeded_at.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.succeeded_at = line[1]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_clean_up_time.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.clean_up_time = line[1]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_added_to_app_at.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.added_to_app_at = line[1]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_removed_from_app.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.removed_from_app = line[1]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_stopped_at.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.stopped_at = line[1]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_started_at.csv' as line 
+with line
+
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.started_at = line[1],
+		container.arguments = line[2]
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_host.csv' as line 
+with line
+
+MERGE (host:host {name: line[2]})
+MERGE (container:container {id: line[0]}) 
+	SET 
+		container.capacity = line[1]
+CREATE UNIQUE (container)-[:hosted_on]->(host)
+;

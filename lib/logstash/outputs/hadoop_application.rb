@@ -186,7 +186,7 @@ class HadoopApplication < HadoopBase
 
 
   def to_csv(path)
-    if @data.has_key?('app_state') && @data.has_key?('app_name') && @data.has_key?('finish_time')
+    if (@data.has_key?('app_state') && @data.has_key?('app_name') && @data.has_key?('finish_time'))
       File.open(path + 'app_summary.csv', 'a') { |f|
         f.puts "#{@id},#{@data['app_state']},#{@data['app_name']},#{@data['finish_time']},#{@data['tracking_url']},#{@data['start_time']},#{@data['final_state']},#{@username},#{@queue},#{@app_master_host}"
       }

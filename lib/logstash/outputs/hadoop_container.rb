@@ -23,7 +23,7 @@ class HadoopContainer < HadoopBase
   def parse_data (data)
     if data.has_key? 'PreviousState'
       # @container_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
-      @states[data['timestamp']] = [data['AppPreviousState'], data['AppState']]
+      @states[data['timestamp']] = [data['PreviousState'], data['State']]
       ###########
     elsif data.has_key? 'Event'
       # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']

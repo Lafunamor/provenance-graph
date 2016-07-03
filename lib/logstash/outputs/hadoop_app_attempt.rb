@@ -26,7 +26,7 @@ class HadoopAppAttempt < HadoopBase
   def parse_data (data)
     if data.has_key? 'PreviousState'
       # @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
-      @states[data['timestamp']] = [data['AppPreviousState'], data['AppState']]
+      @states[data['timestamp']] = [data['PreviousState'], data['State']]
     elsif data.has_key? 'Event'
       # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
       @events[data['timestamp']] = data['Event']
@@ -126,10 +126,15 @@ class HadoopAppAttempt < HadoopBase
   end
 
   def to_csv(path)
-    unless @master_container.nil? || @data.has_key?('final_state')
+    if (@master_container !=nil )
     File.open(path + 'app_attempt_summary.csv', 'a') { |f|
-      f.puts "#{@id},#{@data['final_state']},#{@data['end_time']},#{@data['host_http_adr']},#{@data['resource']},#{@data['priority']},#{@data['token']},#{@host},#{@master_container}"
+      f.puts "#{@id},#{@data['host_http_adr']},#{@data['resource']},#{@data['priority']},#{@data['token']},#{@host},#{@master_container}"
     }
+    end
+    if (@data.has_key?('final_state'))
+      File.open(path + 'app_attempt_summary2.csv', 'a') { |f|
+        f.puts "#{@id},#{@data['final_state']},#{@data['end_time']}"
+      }
     end
     unless @containers.empty?
       File.open(path + 'attempts_containers.csv', 'a') { |g|

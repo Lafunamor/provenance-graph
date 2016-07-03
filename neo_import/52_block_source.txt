@@ -1,0 +1,11 @@
+USING PERIODIC COMMIT 100
+LOAD CSV FROM 'file:/block_source_hosts.csv' as line 
+with line
+
+MERGE (host:host {name: line[1]})
+MERGE (a:block {id: line[0]}) 
+
+
+CREATE UNIQUE (a)-[:source_host {timestamp: line[2]}]->(host)
+
+;

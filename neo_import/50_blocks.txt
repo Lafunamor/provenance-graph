@@ -1,0 +1,22 @@
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/blocks.csv' as line 
+with line
+
+MERGE (file:file {name: line[2]})
+MERGE (block:block {id: line[0]}) 
+	SET 
+		block.namespace = line[1]
+
+CREATE UNIQUE (block)-[:belongs_to]->(file)
+;
+
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/block_size.csv' as line 
+with line
+
+MERGE (block:block {id: line[0]}) 
+	SET 
+		block.size = line[1]
+;

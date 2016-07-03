@@ -1,0 +1,26 @@
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/jobs.csv' as line 
+with line
+
+MERGE (job:job {id: line[0] } ) 
+	SET 
+		job.submit_time = line[1],
+		job.launch_time = line[2],
+		job.first_map_task_launch_time = line[3],
+		job.first_reduce_task_launch_time = line[4],
+		job.finish_time = line[5],
+		job.resources_per_map = line[6],
+		job.resources_per_reduce = line[7],
+		job.num_maps = line[8],
+		job.num_reduces = line[9],
+		job.job_status = line[10],
+		job.map_slot_seconds = line[11],
+		job.reduce_slot_seconds = line[12],
+		job.job_name = line[13]
+
+MERGE (queue:queue {name: line[15] } )
+MERGE (user:user {name: line[14] } )
+CREATE UNIQUE (job)-[:belongs_to]->(user)
+CREATE UNIQUE (job)-[:used_queue]->(queue)
+;

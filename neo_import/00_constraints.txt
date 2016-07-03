@@ -1,0 +1,11 @@
+Create CONSTRAINT ON (n:job) ASSERT n.id IS UNIQUE;
+Create CONSTRAINT ON (n:application) ASSERT n.id IS UNIQUE;
+Create CONSTRAINT ON (n:attempt) ASSERT n.id IS UNIQUE;
+Create CONSTRAINT ON (n:container) ASSERT n.id IS UNIQUE;
+Create CONSTRAINT ON (n:block) ASSERT n.id IS UNIQUE;
+Create CONSTRAINT ON (n:file) ASSERT n.name IS UNIQUE;
+Create CONSTRAINT ON (n:queue) ASSERT n.name IS UNIQUE;
+Create CONSTRAINT ON (n:host) ASSERT n.name IS UNIQUE;
+Create CONSTRAINT ON (n:user) ASSERT n.username IS UNIQUE;
+Create CONSTRAINT ON (n:state) ASSERT n.name IS UNIQUE;
+Create CONSTRAINT ON (n:event) ASSERT n.name IS UNIQUE;

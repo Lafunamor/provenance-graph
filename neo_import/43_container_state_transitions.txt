@@ -1,0 +1,11 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_state_transitions.csv' as line 
+with line
+
+
+MERGE (state:state {name: line[2]})
+MERGE (a:container {id: line[0]}) 
+
+
+CREATE UNIQUE (a)-[:transitioned_to {timestamp: line[1]}]->(state)
+;

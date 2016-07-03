@@ -1,0 +1,17 @@
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_resource_usage.csv' as line 
+with line
+
+
+MERGE (res:resource_usage {ProcessTreeID: line[2],
+		UsedPysicalMemory: line[3],
+		AvailablePhysicalMemory: line[4],
+		UsedVirtualMemory: line[5],
+		AvailableVirtualMemory: line[6]
+		})
+	
+MERGE (a:container {id: line[0]}) 
+
+
+CREATE UNIQUE (a)-[:used {timestamp: line[1]}]->(res)
+;
