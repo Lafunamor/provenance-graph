@@ -36,7 +36,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   default :codec, 'json_lines'
   default :import_mode, false
 
-  declare_threadsafe!
+  # declare_threadsafe!
 
   public
   def register
@@ -204,42 +204,61 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
     if @count % 1000 == 0 || time_difference >= @flush_interval
-
-      if @available_threads.count > 0
-        @available_threads.decrement!
-        # if @write_thread.nil? || @write_thread.stop?
+      if @import_mode
         @eps = (@eps + (@count-@last_count)/(Time.now - @last_flush))/2
         @last_count = @count
         @last_flush = Time.now
-        count = @count
-        @write_thread = Thread.new(count, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone,
-                                   @available_threads, @import_mode) {
-            |count, eps, jobs, apps, app_attempts, containers, blocks, available_threads, import_mode|
-          open(path + 'count.txt', 'w') { |f|
-            f.puts count
-            f.puts eps
-            f.puts available_threads.count
-          }
-          # serialize(jobs, apps, app_attempts, containers, blocks)
-          start = Time.now
-          if import_mode
-            to_csv(jobs, apps, app_attempts, containers, blocks)
-          else
-            flush_to_db(jobs, apps, app_attempts, containers, blocks)
-          end
-          # remove_old_data(jobs, blocks)
-          end_time = Time.now
-          open(path + 'count_return.txt', 'w') { |f|
-            f.puts 'written ' + end_time.to_s
-            f.puts 'elapsed time: ' + (end_time - start).to_s
-            f.puts count
-            f.puts available_threads.count
-          }
-          available_threads.increment!
+        open(path + 'count.txt', 'w') { |f|
+          f.puts @count
+          f.puts @eps
         }
+        start = Time.now
+        to_csv(@jobs, @applications, @app_attempts, @containers, @blocks)
         remove_old_data
-      end
+        end_time = Time.now
+        open(path + 'count_return.txt', 'w') { |f|
+          f.puts 'written ' + end_time.to_s
+          f.puts 'elapsed time: ' + (end_time - start).to_s
+          f.puts @count
+        }
+      else
 
+
+        if @available_threads.count > 0
+          @available_threads.decrement!
+          # if @write_thread.nil? || @write_thread.stop?
+          @eps = (@eps + (@count-@last_count)/(Time.now - @last_flush))/2
+          @last_count = @count
+          @last_flush = Time.now
+          count = @count
+          @write_thread = Thread.new(count, @eps, @jobs.clone, @applications.clone, @app_attempts.clone, @containers.clone, @blocks.clone,
+                                     @available_threads, @import_mode) {
+              |count, eps, jobs, apps, app_attempts, containers, blocks, available_threads, import_mode|
+            open(path + 'count.txt', 'w') { |f|
+              f.puts count
+              f.puts eps
+              f.puts available_threads.count
+            }
+            # serialize(jobs, apps, app_attempts, containers, blocks)
+            start = Time.now
+            if import_mode
+              to_csv(jobs, apps, app_attempts, containers, blocks)
+            else
+              flush_to_db(jobs, apps, app_attempts, containers, blocks)
+            end
+            # remove_old_data(jobs, blocks)
+            end_time = Time.now
+            open(path + 'count_return.txt', 'w') { |f|
+              f.puts 'written ' + end_time.to_s
+              f.puts 'elapsed time: ' + (end_time - start).to_s
+              f.puts count
+              f.puts available_threads.count
+            }
+            available_threads.increment!
+          }
+          remove_old_data
+        end
+      end
       # unhandled(data)
     end
 
@@ -450,7 +469,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   end
 
 
-  def remove_old_data#(jobs_copy, blocks_copy)
+  def remove_old_data #(jobs_copy, blocks_copy)
     # if @import_mode
     #   jobs = apps = app_attempts = containers = blocks = []
     #   jobs_copy.each { |key, value|
@@ -480,11 +499,11 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     #   # @jobs.delete_if { |key, value| value.has_job_summary? }
     #   @blocks.delete_if { |k, v| blocks.include? v }
     # else
-      @jobs = ThreadSafe::Hash.new
-      @applications = ThreadSafe::Hash.new
-      @app_attempts = ThreadSafe::Hash.new
-      @containers = ThreadSafe::Hash.new
-      @blocks = ThreadSafe::Hash.new
+    @jobs = ThreadSafe::Hash.new
+    @applications = ThreadSafe::Hash.new
+    @app_attempts = ThreadSafe::Hash.new
+    @containers = ThreadSafe::Hash.new
+    @blocks = ThreadSafe::Hash.new
     # end
 
     # @jobs.delete_if { |key, value| @last_flush - value.last_edited >= 120 }

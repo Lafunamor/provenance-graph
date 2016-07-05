@@ -1,6 +1,6 @@
 HADOOP %{TIMESTAMP_ISO8601:timestamp} (?:%{HADOOP1}|%{HADOOP2})
 
-HADOOP1 (?:%{HADOOP_JOBSUMMARY}|%{HADOOP_CM_ADDAPP}|%{HADOOP_CM_APPTRANSITONED}|%{HADOOP_CM_APPREMOVE}|%{HADOOP_CM_EVENT}|%{HADOOP_CM_CTRANSITION}|%{HADOOP_CM_CSTARTREQ}|%{HADOOP_RM_CSTOP}|%{HADOOP_CM_CCLEANUP}|%{HADOOP_CM_CSUCCESS}|%{HADOOP_CM_LOCCREATED}|%{HADOOP_CM_APPFINISHED}|%{HADOOP_CM_CSTATS}|%{HADOOP_NM_AUDITOP1}|%{HADOOP_NM_AUDITOP2}|%{HADOOP_RM_CLOUNCH}|%{HADOOP_RM_APPUNREG}|%{HADOOP_RM_APPREG}|%{HADOOP_RM_APPATTREG}|%{HADOOP_RM_APPSUBMIT}|%{HADOOP_RM_APPATTSTAECHANGE}|%{HADOOP_RM_APPATTEND}|%{HADOOP_RM_APPATTSTATEUPDATE}|%{HADOOP_RM_APPSUMMARY}|%{HADOOP_RM_APPOP1}|%{HADOOP_RM_APPOP2}|%{HADOOP_RM_APPOP3}|%{HADOOP_RM_APPOP4}|%{HADOOP_RM_APPOP5}|%{HADOOP_RM_APPOP6}|%{HADOOP_RM_CTRANSITION}|%{HADOOP_RM_CLOUNCH2}|%{HADOOP_RM_APPACCEPT}|%{HADOOP_RM_APPEND}|%{HADOOP_RM_APPATTCRELEASE}|%{HADOOP_RM_RESERVATIONRELEASE}|%{HADOOP_RM_APPUNRESERVE}|%{HADOOP_RM_CCOMPLETE}|%{HADOOP_RM_APPRESERVATION}|%{HADOOP_RM_APPCRESERVATION}|%{HADOOP_SPARK_APPREMOVE}|%{HADOOP_SPARK_CCHANGE}|%{HADOOP_SPARK_APPSTOP}|%{HADOOP_RM_CRELEASE}|%{HADOOP_NM_EVENTSEND}|%{HADOOP_NM_CEXCEPTION}|%{HADOOP_NM_COP}|%{HADOOP_RM_STOREAPPATTEMPT}|%{HADOOP_NM_CPATHDEL})
+HADOOP1 (?:%{HADOOP_JOBSUMMARY}|%{HADOOP_CM_ADDAPP}|%{HADOOP_CM_APPTRANSITONED}|%{HADOOP_CM_APPREMOVE}|%{HADOOP_CM_EVENT}|%{HADOOP_CM_CTRANSITION}|%{HADOOP_CM_CSTARTREQ}|%{HADOOP_RM_CSTOP}|%{HADOOP_CM_CCLEANUP}|%{HADOOP_CM_CSUCCESS}|%{HADOOP_CM_LOCCREATED}|%{HADOOP_CM_APPFINISHED}|%{HADOOP_CM_CSTATS}|%{HADOOP_NM_AUDITOP1}|%{HADOOP_NM_AUDITOP2}|%{HADOOP_RM_CLOUNCH}|%{HADOOP_RM_APPUNREG}|%{HADOOP_RM_APPREG}|%{HADOOP_RM_APPATTREG}|%{HADOOP_RM_APPSUBMIT}|%{HADOOP_RM_APPATTSTAECHANGE}|%{HADOOP_RM_APPATTEND}|%{HADOOP_RM_APPATTSTATEUPDATE}|%{HADOOP_RM_APPSUMMARY}|%{HADOOP_RM_APPOP1}|%{HADOOP_RM_APPOP2}|%{HADOOP_RM_APPOP3}|%{HADOOP_RM_APPOP4}|%{HADOOP_RM_APPOP5}|%{HADOOP_RM_APPOP6}|%{HADOOP_RM_CTRANSITION}|%{HADOOP_RM_CLOUNCH2}|%{HADOOP_RM_APPACCEPT}|%{HADOOP_RM_APPEND}|%{HADOOP_RM_APPATTCRELEASE}|%{HADOOP_RM_CCOMPLETE}|%{HADOOP_SPARK_APPREMOVE}|%{HADOOP_SPARK_CCHANGE}|%{HADOOP_SPARK_APPSTOP}|%{HADOOP_RM_CRELEASE}|%{HADOOP_NM_EVENTSEND}|%{HADOOP_NM_CEXCEPTION}|%{HADOOP_NM_COP}|%{HADOOP_RM_STOREAPPATTEMPT}|%{HADOOP_NM_CPATHDEL})
 
 HADOOP2 (?:%{HDFS_BLK_ALLOC}|%{HDFS_BLKMAP_UPDATE}|%{HDFS_BLK_INVALIDATE}|%{HDFS_BLK_RECEIVED}|%{HDFS_BLK_RECEIVING}|%{HDFS_BLK_DELED}|%{HDFS_BLK_DEL}|%{HDFS_BLK_DELED2}|%{HDFS_BLK_DEL2}|%{HDFS_BLK_DEL3}|%{HDFS_BLK_TRACE}|%{HDFS_STATE_CHANGE}|%{HDFS_AUDIT}|%{HDFS_CLI_TRACE})
 
@@ -39,11 +39,9 @@ HADOOP_RM_CLOUNCH INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.A
 HADOOP_RM_APPACCEPT INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Accepted application %{WORD:ApplicationID} from user: %{WORD:UserName}, in queue: %{WORD:queue}, currently num of applications: %{WORD:CurrentNumofApplications}
 HADOOP_RM_APPEND INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Application %{WORD:AppAttemptID} is done. finalState=%{WORD:FinalState}
 HADOOP_RM_APPATTCRELEASE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Application attempt %{WORD:AppAttemptID} released container %{WORD:ContainerID} on node: host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:AvailableContainers} used=%{WORD:used} with event: %{WORD:Event}
-HADOOP_RM_RESERVATIONRELEASE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Releasing reservation that cannot be satisfied for application %{WORD:AppAttemptID} on node host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:Available} used=%{WORD:Used}
-HADOOP_RM_APPUNRESERVE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt: Application %{WORD:ApplicationID} unreserved  on node host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:AvailableContainers} used=%{WORD:UsedContainers}, currently has %{WORD:CurrentlyHas} at priority %{WORD:priority}; currentReservation %{GREEDYDATA:CurrentReservation}
+
 HADOOP_RM_CCOMPLETE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt: Completed container: %{WORD:ContainerID} in state: %{WORD:State} event:%{WORD:Event}
-HADOOP_RM_APPRESERVATION INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt: Making reservation: node=%{HOSTNAME:Host} app_id=%{WORD:ApplicationID}
-HADOOP_RM_APPCRESERVATION INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode: Reserved container %{WORD:ContainerID} on node host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:available} used=%{WORD:used} for application %{GREEDYDATA:ApplicationName}
+
 HADOOP_SPARK_APPREMOVE INFO org.apache.spark.network.shuffle.ExternalShuffleBlockManager: Application %{WORD:ApplicationID} removed, cleanupLocalDirs = %{WORD:CleanLocalDisk}
 HADOOP_SPARK_CCHANGE INFO org.apache.spark.network.yarn.YarnShuffleService: %{WORD:StateChange} container %{WORD:ContainerID}
 HADOOP_SPARK_APPSTOP INFO org.apache.spark.network.yarn.YarnShuffleService: Stopping application %{WORD:ApplicationID}
@@ -56,6 +54,7 @@ HADOOP_NM_CPATHDEL INFO org.apache.hadoop.yarn.server.nodemanager.DefaultContain
 
 HDFS_BLK_STATE \{blockUCState=%{WORD:BlockUCState}, primaryNodeIndex=%{NUMBER:primaryNodeIndex}, replicas=%{GREEDYDATA:replicas}\}
 
+#Block information
 HDFS_BLK_ALLOC INFO org.apache.hadoop.hdfs.StateChange: BLOCK\* allocateBlock: %{PATH:HDFSpath}. %{GREEDYDATA:namespace} %{WORD:Block_ID}%{HDFS_BLK_STATE}
 HDFS_BLKMAP_UPDATE INFO BlockStateChange: BLOCK\* addStoredBlock: blockMap updated: %{HOSTPORT:hdfs_host} is added to %{WORD:Block_ID}%{HDFS_BLK_STATE} size %{NUMBER:size}
 HDFS_BLK_INVALIDATE INFO BlockStateChange: BLOCK\* InvalidateBlocks: add %{WORD:Block_ID} to %{HOSTPORT:hdfs_host}
@@ -70,3 +69,10 @@ HDFS_BLK_TRACE INFO org.apache.hadoop.hdfs.server.datanode.DataNode.clienttrace:
 HDFS_STATE_CHANGE INFO org.apache.hadoop.hdfs.StateChange: DIR\* completeFile: %{PATH:HDFSpath} is closed by %{GREEDYDATA:client}
 HDFS_AUDIT INFO FSNames2015-10-27 11:12:39,394 INFO FSNamesystem.audit: allowed=%{WORD:allowed} ugi=%{GREEDYDATA:user_auth} ip=\/%{IPORHOST:hdfs_host} cmd=%{WORD:command} src=%{GREEDYDATA:source} dst=%{GREEDYDATA:destination} perm=%{WORD:perm} proto=%{WORD:proto}
 HDFS_CLI_TRACE INFO org.apache.hadoop.hdfs.server.datanode.DataNode.clienttrace: src: /%{HOSTPORT:source_host}, dest: /%{HOSTPORT:dest_host}, bytes: %{NUMBER:bytes}, op: %{WORD:operation}, cliID: %{DATA:DFSClientID}, offset: %{NUMBER:offset}, srvID: %{GREEDYDATA:srvID}, blockid: %{GREEDYDATA:namespace}:%{WORD:Block_ID}, duration: %{NUMBER:duration}
+
+
+#unused
+HADOOP_RM_APPRESERVATION INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt: Making reservation: node=%{HOSTNAME:Host} app_id=%{WORD:ApplicationID}
+HADOOP_RM_APPCRESERVATION INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode: Reserved container %{WORD:ContainerID} on node host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:available} used=%{WORD:used} for application %{GREEDYDATA:ApplicationName}
+HADOOP_RM_RESERVATIONRELEASE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Releasing reservation that cannot be satisfied for application %{WORD:AppAttemptID} on node host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:Available} used=%{WORD:Used}
+HADOOP_RM_APPUNRESERVE INFO org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt: Application %{WORD:ApplicationID} unreserved  on node host: %{HOSTPORT:Host} #containers=%{WORD:NumberOfContainers} available=%{WORD:AvailableContainers} used=%{WORD:UsedContainers}, currently has %{WORD:CurrentlyHas} at priority %{WORD:priority}; currentReservation %{GREEDYDATA:CurrentReservation}

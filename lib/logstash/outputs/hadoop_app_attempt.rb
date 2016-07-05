@@ -10,7 +10,7 @@ class HadoopAppAttempt < HadoopBase
     @last_edited = Time.now
     # @containers = Hash.new
     @states = ThreadSafe::Hash.new
-    @events = ThreadSafe::Hash.new
+    # @events = ThreadSafe::Hash.new
     @containers = []
     @data = ThreadSafe::Hash.new
     # @data['final_state'] = @data['end_time'] = @data['host_http_adr'] = @data['resource'] = @data['priority'] = @data['token'] =
@@ -27,9 +27,9 @@ class HadoopAppAttempt < HadoopBase
     if data.has_key? 'PreviousState'
       # @app_states[data['timestamp']] = HadoopStateChange.new(data['timestamp'], data['PreviousState'], data['State'])
       @states[data['timestamp']] = [data['PreviousState'], data['State']]
-    elsif data.has_key? 'Event'
-      # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
-      @events[data['timestamp']] = data['Event']
+    # elsif data.has_key? 'Event'
+    #   # @events[data['timestamp']]= HadoopEvent.new data['timestamp'], data['Event']
+    #   @events[data['timestamp']] = data['Event']
     elsif data['message'].include?('is done.')
       get_summary data
     elsif data['message'].include?('Storing attempt')
@@ -146,11 +146,11 @@ class HadoopAppAttempt < HadoopBase
         i.puts states_to_csv
       }
     end
-    unless @events.empty?
-      File.open(path + 'app_attempt_events.csv', 'a') { |j|
-        j.puts events_to_csv
-      }
-    end
+    # unless @events.empty?
+    #   File.open(path + 'app_attempt_events.csv', 'a') { |j|
+    #     j.puts events_to_csv
+    #   }
+    # end
   end
 
   def to_csv2
