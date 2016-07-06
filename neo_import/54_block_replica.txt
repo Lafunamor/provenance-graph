@@ -4,8 +4,7 @@ with line
 
 MERGE (replica:block_replica {BlockUCState: line[2],
 		primaryNodeIndex: line[3],
-		replicas: line[4],
-		size: line[5]
+		replicas: line[4]
 		})
 MERGE (a:block {id: line[0]}) 
 

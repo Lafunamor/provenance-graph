@@ -129,8 +129,13 @@ class HadoopHDFSBlock < HadoopBase
   def to_csv(path)
     if @data.has_key? 'namespace'
     File.open(path + 'blocks.csv', 'a') { |f|
-      f.puts @id +','+ @data['namespace'] +','+ @path
+      f.puts @id +','+ @data['namespace']
     }
+    end
+    unless @path.nil?
+      File.open(path + 'block_path.csv', 'a') { |f|
+        f.puts @id +','+  @path
+      }
     end
     if @data.has_key? 'size'
       File.open(path + 'block_size.csv', 'a') { |f|
@@ -183,7 +188,7 @@ class HadoopHDFSBlock < HadoopBase
     string = ''
     unless @replica.empty?
       @replica.each { |k, v|
-        string += "#{@id},#{k},#{v[0]},#{v[1]},#{v[2]},#{v[3]}\n"
+        string += "#{@id},#{k},#{v[0]},#{v[1]},#{v[2]}\n"
       }
     end
     string

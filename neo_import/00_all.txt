@@ -157,17 +157,7 @@ MERGE (a:attempt {id: line[0]})
 CREATE UNIQUE (a)-[:from {timestamp: line[1]}]->(prev_state)
 CREATE UNIQUE (a)-[:to {timestamp: line[1]}]->(new_state)
 ;
-USING PERIODIC COMMIT
-LOAD CSV FROM 'file:/app_attempt_events.csv' as line 
-with line
 
-
-MERGE (event:event {name: line[2]})
-MERGE (a:attempt {id: line[0]}) 
-
-
-CREATE UNIQUE (a)-[:has {timestamp: line[1]}]->(event)
-;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/attempts_containers.csv' as line 
 with line
@@ -330,10 +320,18 @@ USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/blocks.csv' as line 
 with line
 
-MERGE (file:file {name: line[2]})
 MERGE (block:block {id: line[0]}) 
 	SET 
 		block.namespace = line[1]
+
+;
+
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/block_path.csv' as line 
+with line
+
+MERGE (file:file {name: line[1]})
+MERGE (block:block {id: line[0]}) 
 
 CREATE UNIQUE (block)-[:belongs_to]->(file)
 ;
@@ -387,8 +385,7 @@ with line
 
 MERGE (replica:block_replica {BlockUCState: line[2],
 		primaryNodeIndex: line[3],
-		replicas: line[4],
-		size: line[5]
+		replicas: line[4]
 		})
 MERGE (a:block {id: line[0]}) 
 
