@@ -12,7 +12,7 @@ class HadoopHDFSBlock < HadoopBase
     @source_host = ThreadSafe::Hash.new
     @destination_host = ThreadSafe::Hash.new
     @data['namespace'] = @username = @queue = ''
-    @path = ''
+    # @path = ''
   end
 
   def parse_data(data)
