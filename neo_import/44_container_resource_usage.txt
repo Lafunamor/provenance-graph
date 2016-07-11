@@ -13,5 +13,5 @@ MERGE (res:resource_usage {ProcessTreeID: line[2],
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:used {timestamp: line[1]}]->(res)
+MERGE (a)-[:used {timestamp: line[1]}]->(res)
 ;

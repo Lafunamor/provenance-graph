@@ -7,5 +7,5 @@ MERGE (event:event {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:has {timestamp: line[1]}]->(event)
+MERGE (a)-[:has {timestamp: line[1]}]->(event)
 ;

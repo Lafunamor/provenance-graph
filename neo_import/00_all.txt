@@ -33,8 +33,8 @@ MERGE (job:job {id: line[0] } )
 
 MERGE (queue:queue {name: line[15] } )
 MERGE (user:user {name: line[14] } )
-CREATE UNIQUE (job)-[:belongs_to]->(user)
-CREATE UNIQUE (job)-[:used_queue]->(queue)
+MERGE (job)-[:belongs_to]->(user)
+MERGE (job)-[:used_queue]->(queue)
 ;
 
 USING PERIODIC COMMIT
@@ -44,7 +44,7 @@ with line
 MERGE (app:application {name: line[1] } )
 MERGE (job:job {id: line[0]})
 
-CREATE UNIQUE (job)-[:has]->(app)
+MERGE (job)-[:has]->(app)
 
 ;
 
@@ -64,9 +64,9 @@ MERGE (app:application {id: line[0]})
 		app.final_state = line[6]
 
 
-CREATE UNIQUE (app)-[:belongs_to]->(user)
-CREATE UNIQUE (app)-[:used_queue]->(queue)
-CREATE UNIQUE (app)-[:app_master]->(host)
+MERGE (app)-[:belongs_to]->(user)
+MERGE (app)-[:used_queue]->(queue)
+MERGE (app)-[:app_master]->(host)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_states.csv' as line 
@@ -77,8 +77,8 @@ MERGE (new_state:state {name: line[2]})
 MERGE (a:application {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:from {timestamp: line[1]}]->(prev_state)
-CREATE UNIQUE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
+MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_events.csv' as line 
@@ -89,7 +89,7 @@ MERGE (event:event {name: line[2]})
 MERGE (a:application {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:has {timestamp: line[1]}]->(event)
+MERGE (a)-[:has {timestamp: line[1]}]->(event)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_attempts.csv' as line 
@@ -100,7 +100,7 @@ MERGE (attempt:attempt {id: line[1]})
 MERGE (a:application {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:has]->(attempt)
+MERGE (a)-[:has]->(attempt)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_blocks.csv' as line 
@@ -113,7 +113,7 @@ MERGE (a:application {id: line[0]})
 
 
 FOREACH(ignoreMe IN CASE WHEN line[3]='HDFS_WRITE' THEN [1] ELSE [] END | 
-    CREATE UNIQUE (a)-[:HDFS_WRITE {timestamp: line[1]}]->(block) )
+    MERGE (a)-[:HDFS_WRITE {timestamp: line[1]}]->(block) )
 ;
 
 USING PERIODIC COMMIT
@@ -130,8 +130,8 @@ MERGE (attempt:attempt {id: line[0]})
 		attempt.token = line[4]
 
 
-CREATE UNIQUE (attempt)-[:master_container]->(master)
-CREATE UNIQUE (attempt)-[:hosted_on]->(host)
+MERGE (attempt)-[:master_container]->(master)
+MERGE (attempt)-[:hosted_on]->(host)
 ;
 
 
@@ -154,8 +154,8 @@ MERGE (new_state:state {name: line[2]})
 MERGE (a:attempt {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:from {timestamp: line[1]}]->(prev_state)
-CREATE UNIQUE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
+MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
 ;
 
 USING PERIODIC COMMIT
@@ -167,7 +167,7 @@ MERGE (attempt:attempt {id: line[0]})
 MERGE (container:container {id: line[1]}) 
 
 
-CREATE UNIQUE (attempt)-[:has]->(container)
+MERGE (attempt)-[:has]->(container)
 ;
 
 USING PERIODIC COMMIT
@@ -179,7 +179,7 @@ MERGE (container:container {id: line[0]})
 	SET 
 		container.start_request_time = line[2]
 
-CREATE UNIQUE (container)-[:belongs_to]->(user)
+MERGE (container)-[:belongs_to]->(user)
 ;
 
 
@@ -262,7 +262,7 @@ MERGE (host:host {name: line[2]})
 MERGE (container:container {id: line[0]}) 
 	SET 
 		container.capacity = line[1]
-CREATE UNIQUE (container)-[:hosted_on]->(host)
+MERGE (container)-[:hosted_on]->(host)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_states.csv' as line 
@@ -273,8 +273,8 @@ MERGE (new_state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:from {timestamp: line[1]}]->(prev_state)
-CREATE UNIQUE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
+MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_events.csv' as line 
@@ -285,7 +285,7 @@ MERGE (event:event {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:has {timestamp: line[1]}]->(event)
+MERGE (a)-[:has {timestamp: line[1]}]->(event)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_state_transitions.csv' as line 
@@ -296,7 +296,7 @@ MERGE (state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:transitioned_to {timestamp: line[1]}]->(state)
+MERGE (a)-[:transitioned_to {timestamp: line[1]}]->(state)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_resource_usage.csv' as line 
@@ -313,7 +313,7 @@ MERGE (res:resource_usage {ProcessTreeID: line[2],
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:used {timestamp: line[1]}]->(res)
+MERGE (a)-[:used {timestamp: line[1]}]->(res)
 ;
 
 USING PERIODIC COMMIT
@@ -333,7 +333,7 @@ with line
 MERGE (file:file {name: line[1]})
 MERGE (block:block {id: line[0]}) 
 
-CREATE UNIQUE (block)-[:belongs_to]->(file)
+MERGE (block)-[:belongs_to]->(file)
 ;
 
 
@@ -354,7 +354,7 @@ MERGE (prev_state:state {name: line[2]})
 MERGE (a:block {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:state {timestamp: line[1]}]->(prev_state)
+MERGE (a)-[:state {timestamp: line[1]}]->(prev_state)
 
 ;
 USING PERIODIC COMMIT 100
@@ -365,7 +365,7 @@ MERGE (host:host {name: line[1]})
 MERGE (a:block {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:source_host {timestamp: line[2]}]->(host)
+MERGE (a)-[:source_host {timestamp: line[2]}]->(host)
 
 ;
 USING PERIODIC COMMIT
@@ -376,7 +376,7 @@ MERGE (host:host {name: line[1]})
 MERGE (a:block {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:destination_host {timestamp: line[2]}]->(host)
+MERGE (a)-[:destination_host {timestamp: line[2]}]->(host)
 
 ;
 USING PERIODIC COMMIT
@@ -390,6 +390,6 @@ MERGE (replica:block_replica {BlockUCState: line[2],
 MERGE (a:block {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:replica {timestamp: line[1]}]->(replica)
+MERGE (a)-[:replica {timestamp: line[1]}]->(replica)
 
 ;

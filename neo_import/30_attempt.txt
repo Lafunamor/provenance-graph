@@ -13,8 +13,8 @@ MERGE (attempt:attempt {id: line[0]})
 		attempt.token = line[4]
 
 
-CREATE UNIQUE (attempt)-[:master_container]->(master)
-CREATE UNIQUE (attempt)-[:hosted_on]->(host)
+MERGE (attempt)-[:master_container]->(master)
+MERGE (attempt)-[:hosted_on]->(host)
 ;
 
 

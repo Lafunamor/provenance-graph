@@ -6,6 +6,6 @@ with line
 MERGE (app:application {name: line[1] } )
 MERGE (job:job {id: line[0]})
 
-CREATE UNIQUE (job)-[:has]->(app)
+MERGE (job)-[:has]->(app)
 
 ;

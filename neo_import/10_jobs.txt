@@ -21,6 +21,6 @@ MERGE (job:job {id: line[0] } )
 
 MERGE (queue:queue {name: line[15] } )
 MERGE (user:user {name: line[14] } )
-CREATE UNIQUE (job)-[:belongs_to]->(user)
-CREATE UNIQUE (job)-[:used_queue]->(queue)
+MERGE (job)-[:belongs_to]->(user)
+MERGE (job)-[:used_queue]->(queue)
 ;

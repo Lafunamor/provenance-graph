@@ -9,6 +9,6 @@ MERGE (replica:block_replica {BlockUCState: line[2],
 MERGE (a:block {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:replica {timestamp: line[1]}]->(replica)
+MERGE (a)-[:replica {timestamp: line[1]}]->(replica)
 
 ;

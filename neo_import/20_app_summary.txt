@@ -15,7 +15,7 @@ MERGE (app:application {id: line[0]})
 		app.final_state = line[6]
 
 
-CREATE UNIQUE (app)-[:belongs_to]->(user)
-CREATE UNIQUE (app)-[:used_queue]->(queue)
-CREATE UNIQUE (app)-[:app_master]->(host)
+MERGE (app)-[:belongs_to]->(user)
+MERGE (app)-[:used_queue]->(queue)
+MERGE (app)-[:app_master]->(host)
 ;

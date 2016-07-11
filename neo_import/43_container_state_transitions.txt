@@ -7,5 +7,5 @@ MERGE (state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:transitioned_to {timestamp: line[1]}]->(state)
+MERGE (a)-[:transitioned_to {timestamp: line[1]}]->(state)
 ;

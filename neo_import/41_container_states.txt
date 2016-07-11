@@ -7,6 +7,6 @@ MERGE (new_state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:from {timestamp: line[1]}]->(prev_state)
-CREATE UNIQUE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
+MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
 ;

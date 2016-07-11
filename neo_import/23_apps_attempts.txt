@@ -7,5 +7,5 @@ MERGE (attempt:attempt {id: line[1]})
 MERGE (a:application {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:has]->(attempt)
+MERGE (a)-[:has]->(attempt)
 ;

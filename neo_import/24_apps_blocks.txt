@@ -9,5 +9,5 @@ MERGE (a:application {id: line[0]})
 
 
 FOREACH(ignoreMe IN CASE WHEN line[3]='HDFS_WRITE' THEN [1] ELSE [] END | 
-    CREATE UNIQUE (a)-[:HDFS_WRITE {timestamp: line[1]}]->(block) )
+    MERGE (a)-[:HDFS_WRITE {timestamp: line[1]}]->(block) )
 ;

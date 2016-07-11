@@ -8,7 +8,7 @@ MERGE (container:container {id: line[0]})
 	SET 
 		container.start_request_time = line[2]
 
-CREATE UNIQUE (container)-[:belongs_to]->(user)
+MERGE (container)-[:belongs_to]->(user)
 ;
 
 
@@ -91,5 +91,5 @@ MERGE (host:host {name: line[2]})
 MERGE (container:container {id: line[0]}) 
 	SET 
 		container.capacity = line[1]
-CREATE UNIQUE (container)-[:hosted_on]->(host)
+MERGE (container)-[:hosted_on]->(host)
 ;

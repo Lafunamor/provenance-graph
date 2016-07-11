@@ -6,6 +6,6 @@ MERGE (host:host {name: line[1]})
 MERGE (a:block {id: line[0]}) 
 
 
-CREATE UNIQUE (a)-[:destination_host {timestamp: line[2]}]->(host)
+MERGE (a)-[:destination_host {timestamp: line[2]}]->(host)
 
 ;
