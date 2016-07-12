@@ -1,0 +1,70 @@
+# relations are marked with a *
+
+Jobs:
+		submit_time,
+		launch_time
+		first_map_task_launch_time
+		first_reduce_task_launch_time 
+		finish_time
+		resources_per_map
+		resources_per_reduce
+		num_maps
+		num_reduces
+		job_status
+		map_slot_seconds
+		reduce_slot_seconds
+		job_name
+		*queue
+		*user
+		
+Applications:
+		app_state
+		app_name
+		finish_time
+		tracking_url
+		start_time
+		final_state
+		*user
+		*queue
+		*host
+		*states (previous / new)
+		*events
+		*blocks
+
+Attempts:
+		host_http_adr
+		resource
+		priority
+		token
+		final_state
+		end_time
+		*states (previous / new)
+		*master_container
+		*host
+		
+Containers:
+		start_request_time
+		localizer_created_at
+		container_succeeded_at
+		clean_up_time
+		added_to_app_at
+		removed_from_app
+		stopped_at
+		started_at
+		arguments
+		capacity
+		*states (previous / new)
+		*events
+		*state
+		*host
+		*user
+		*container_resource_usage {ProcessTreeID, UsedPysicalMemory, *AvailablePhysicalMemory, UsedVirtualMemory, AvailableVirtualMemory}
+		
+Blocks:
+		namespace
+		file
+		size
+		*state
+		*source_host
+		*destination_host
+		*block_replica_states {BlockUCState, primaryNodeIndex, replicas}
