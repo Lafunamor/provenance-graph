@@ -153,7 +153,7 @@ class HadoopContainer < HadoopBase
     end
     if (@data.has_key?('capacity') && @host != nil)
       File.open(path + 'container_host.csv', 'a') { |f|
-        f.puts @id +','+  @data['capacity'] +','+@host
+        f.puts @id +',"'+  @data['capacity'] +'",'+@host
       }
     end
 

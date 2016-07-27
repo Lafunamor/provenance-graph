@@ -17,7 +17,7 @@ class HadoopHDFSBlock < HadoopBase
 
   def parse_data(data)
     if data['message'].include?('InvalidateBlocks: add')
-      @states[data['timestamp']]=["invalidate block from #{data['hdfs_host']}"]
+      @states[data['timestamp']]=["invalidate block"]
       # @states += [data['timestamp'], 'invalidate', data['hdfs_host']]
 
     elsif data['message'].include?('allocateBlock')
@@ -35,26 +35,30 @@ class HadoopHDFSBlock < HadoopBase
       # @states += [data['timestamp'], 'addToInvalidates']
 
     elsif data['message'].include?('BlockManager') && data['message'].include?('to delete')
-      @states[data['timestamp']]=["askToDelete from #{data['hdfs_host']}"]
+      @states[data['timestamp']]=["askToDelete"]
       # @states += [data['timestamp'], 'askToDelete', data['hdfs_host']]
 
     elsif data['message'].include?('FsDatasetAsyncDiskService: Deleted')
       @data['namespace'] = data['namespace']
       @path = data['HDFSpath']
-      @states[data['timestamp']]=["Deleted #{data['hdfs_host']}"]
+      @states[data['timestamp']]=["Deleted"]
       # @states += [data['timestamp'].to_s, 'Deleted', data['hdfs_host'].to_s]
 
     elsif data['message'].include?('DataNode: Receiving')
       @data['namespace'] = data['namespace']
-      @source_host[data['timestamp']] = data['source_host']
-      @destination_host[data['timestamp']] = data['dest_host']
+      source = data['source_host'].split(':')
+      @source_host[data['timestamp']] = source[0]
+      destination = data['dest_host'].split(':')
+      @destination_host[data['timestamp']] = destination[0]
 
       @states[data['timestamp']]=['Receiving block']
       # @states += [data['timestamp'], 'Receiving block']
     elsif data['message'].include?('DataNode: Received')
       @data['namespace'] = data['namespace']
-      @source_host[data['timestamp']] = data['source_host']
-      @destination_host[data['timestamp']] = data['dest_host']
+      source = data['source_host'].split(':')
+      @source_host[data['timestamp']] = source[0]
+      destination = data['dest_host'].split(':')
+      @destination_host[data['timestamp']] = destination[0]
 
       @states[data['timestamp']]=['Received block']
       # @states += [data['timestamp'], 'Received block']

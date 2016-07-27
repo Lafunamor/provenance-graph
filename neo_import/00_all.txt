@@ -17,18 +17,18 @@ with line
 
 MERGE (job:job {id: line[0] } ) 
 	SET 
-		job.submit_time = line[1],
-		job.launch_time = line[2],
-		job.first_map_task_launch_time = line[3],
-		job.first_reduce_task_launch_time = line[4],
-		job.finish_time = line[5],
-		job.resources_per_map = line[6],
-		job.resources_per_reduce = line[7],
-		job.num_maps = line[8],
-		job.num_reduces = line[9],
+		job.submit_time = TOINT(line[1]),
+		job.launch_time = TOINT(line[2]),
+		job.first_map_task_launch_time = TOINT(line[3]),
+		job.first_reduce_task_launch_time = TOINT(line[4]),
+		job.finish_time = TOINT(line[5]),
+		job.resources_per_map = TOINT(line[6]),
+		job.resources_per_reduce = TOINT(line[7]),
+		job.num_maps = TOINT(line[8]),
+		job.num_reduces = TOINT(line[9]),
 		job.job_status = line[10],
-		job.map_slot_seconds = line[11],
-		job.reduce_slot_seconds = line[12],
+		job.map_slot_seconds = TOINT(line[11]),
+		job.reduce_slot_seconds = TOINT(line[12]),
 		job.job_name = line[13]
 
 MERGE (queue:queue {name: line[15] } )
@@ -41,7 +41,7 @@ USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/jobs_apps.csv' as line 
 with line
 
-MERGE (app:application {name: line[1] } )
+MERGE (app:application {id: line[1] } )
 MERGE (job:job {id: line[0]})
 
 MERGE (job)-[:has]->(app)
@@ -58,9 +58,9 @@ MERGE (app:application {id: line[0]})
 	SET 
 		app.app_state = line[1],
 		app.app_name = line[2], 
-		app.finish_time = line[3], 
+		app.finish_time = TOINT(line[3]), 
 		app.tracking_url = line[4], 
-		app.start_time = line[5], 
+		app.start_time = TOINT(line[5]), 
 		app.final_state = line[6]
 
 
@@ -77,8 +77,8 @@ MERGE (new_state:state {name: line[2]})
 MERGE (a:application {id: line[0]}) 
 
 
-MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
-MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: (line[1])}]->(prev_state)
+MERGE (a)-[:to {timestamp: (line[1])}]->(new_state)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_events.csv' as line 
@@ -89,7 +89,7 @@ MERGE (event:event {name: line[2]})
 MERGE (a:application {id: line[0]}) 
 
 
-MERGE (a)-[:has {timestamp: line[1]}]->(event)
+MERGE (a)-[:has {timestamp: (line[1])}]->(event)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_attempts.csv' as line 
@@ -113,7 +113,7 @@ MERGE (a:application {id: line[0]})
 
 
 FOREACH(ignoreMe IN CASE WHEN line[3]='HDFS_WRITE' THEN [1] ELSE [] END | 
-    MERGE (a)-[:HDFS_WRITE {timestamp: line[1]}]->(block) )
+    MERGE (a)-[:HDFS_WRITE {timestamp: (line[1])}]->(block) )
 ;
 
 USING PERIODIC COMMIT
@@ -142,7 +142,7 @@ with line
 MERGE (attempt:attempt {id: line[0]}) 
 	SET 
 		attempt.final_state = line[1],
-		attempt.end_time = line[2]
+		attempt.end_time = TOINT(line[2])
 
 ;
 USING PERIODIC COMMIT
@@ -154,8 +154,8 @@ MERGE (new_state:state {name: line[2]})
 MERGE (a:attempt {id: line[0]}) 
 
 
-MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
-MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: (line[1])}]->(prev_state)
+MERGE (a)-[:to {timestamp: (line[1])}]->(new_state)
 ;
 
 USING PERIODIC COMMIT
@@ -177,7 +177,7 @@ with line
 MERGE (user:user {name: line[1]})
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.start_request_time = line[2]
+		container.start_request_time = TOINT(line[2])
 
 MERGE (container)-[:belongs_to]->(user)
 ;
@@ -189,7 +189,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.localizer_created_at = line[1]
+		container.localizer_created_at = TOINT(line[1])
 ;
 
 
@@ -199,7 +199,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.succeeded_at = line[1]
+		container.succeeded_at = TOINT(line[1])
 ;
 
 
@@ -209,7 +209,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.clean_up_time = line[1]
+		container.clean_up_time = TOINT(line[1])
 ;
 
 
@@ -219,7 +219,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.added_to_app_at = line[1]
+		container.added_to_app_at = TOINT(line[1])
 ;
 
 
@@ -229,7 +229,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.removed_from_app = line[1]
+		container.removed_from_app = TOINT(line[1])
 ;
 
 
@@ -239,7 +239,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.stopped_at = line[1]
+		container.stopped_at = TOINT(line[1])
 ;
 
 
@@ -249,7 +249,7 @@ with line
 
 MERGE (container:container {id: line[0]}) 
 	SET 
-		container.started_at = line[1],
+		container.started_at = TOINT(line[1]),
 		container.arguments = line[2]
 ;
 
@@ -269,13 +269,21 @@ LOAD CSV FROM 'file:/container_states.csv' as line
 with line
 
 MERGE (prev_state:state {name: line[3]})
-MERGE (new_state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-MERGE (a)-[:from {timestamp: line[1]}]->(prev_state)
-MERGE (a)-[:to {timestamp: line[1]}]->(new_state)
+MERGE (a)-[:from {timestamp: (line[1])}]->(prev_state)
 ;
+USING PERIODIC COMMIT
+LOAD CSV FROM 'file:/container_states.csv' as line 
+with line
+
+MERGE (new_state:state {name: line[2]})
+MERGE (a:container {id: line[0]}) 
+
+MERGE (a)-[:to {timestamp: (line[1])}]->(new_state)
+;
+
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_events.csv' as line 
 with line
@@ -285,7 +293,7 @@ MERGE (event:event {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-MERGE (a)-[:has {timestamp: line[1]}]->(event)
+MERGE (a)-[:has {timestamp: (line[1])}]->(event)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_state_transitions.csv' as line 
@@ -296,24 +304,22 @@ MERGE (state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
-MERGE (a)-[:transitioned_to {timestamp: line[1]}]->(state)
+MERGE (a)-[:transitioned_to {timestamp: (line[1])}]->(state)
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_resource_usage.csv' as line 
 with line
 
-
-MERGE (res:resource_usage {ProcessTreeID: line[2],
+MERGE (a:container {id: line[0]}) 
+CREATE (res:resource_usage {ProcessTreeID: line[2],
 		UsedPysicalMemory: line[3],
 		AvailablePhysicalMemory: line[4],
 		UsedVirtualMemory: line[5],
 		AvailableVirtualMemory: line[6]
 		})
 	
-MERGE (a:container {id: line[0]}) 
 
-
-MERGE (a)-[:used {timestamp: line[1]}]->(res)
+CREATE (a)-[:used {timestamp: (line[1])}]->(res)
 ;
 
 USING PERIODIC COMMIT
@@ -343,7 +349,7 @@ with line
 
 MERGE (block:block {id: line[0]}) 
 	SET 
-		block.size = line[1]
+		block.size = TOINT(line[1])
 ;
 USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/block_states.csv' as line 
@@ -354,42 +360,40 @@ MERGE (prev_state:state {name: line[2]})
 MERGE (a:block {id: line[0]}) 
 
 
-MERGE (a)-[:state {timestamp: line[1]}]->(prev_state)
+MERGE (a)-[:state {timestamp: (line[1])}]->(prev_state)
 
 ;
-USING PERIODIC COMMIT 100
+USING PERIODIC COMMIT 
 LOAD CSV FROM 'file:/block_source_hosts.csv' as line 
 with line
 
 MERGE (host:host {name: line[1]})
 MERGE (a:block {id: line[0]}) 
 
-
-MERGE (a)-[:source_host {timestamp: line[2]}]->(host)
+MERGE (a)-[:source_host {timestamp: (line[2])}]->(host)
 
 ;
-USING PERIODIC COMMIT
+USING PERIODIC COMMIT 
 LOAD CSV FROM 'file:/block_destination_hosts.csv' as line 
 with line
 
 MERGE (host:host {name: line[1]})
 MERGE (a:block {id: line[0]}) 
 
-
-MERGE (a)-[:destination_host {timestamp: line[2]}]->(host)
+MERGE (a)-[:destination_host {timestamp: (line[2])}]->(host)
 
 ;
-USING PERIODIC COMMIT
+USING PERIODIC COMMIT 
 LOAD CSV FROM 'file:/block_replica_states.csv' as line 
 with line
-
-MERGE (replica:block_replica {BlockUCState: line[2],
+MERGE (a:block {id: line[0]}) 
+CREATE (replica:block_replica {BlockUCState: line[2],
 		primaryNodeIndex: line[3],
 		replicas: line[4]
 		})
-MERGE (a:block {id: line[0]}) 
 
 
-MERGE (a)-[:replica {timestamp: line[1]}]->(replica)
+
+CREATE (a)-[:replica {timestamp: (line[1])}]->(replica)
 
 ;

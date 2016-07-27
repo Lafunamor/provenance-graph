@@ -283,19 +283,19 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   end
 
   def serialize(jobs, apps, app_attempts, containers, blocks)
-    File.open(path + '.save_job.yaml', 'w') { |f|
+    File.open(path + 'save_job.yaml', 'w') { |f|
       f.write(YAML.dump(jobs))
     }
-    File.open(path + '.save_apps.yaml', 'w') { |f|
+    File.open(path + 'save_apps.yaml', 'w') { |f|
       f.write(YAML.dump(apps))
     }
-    File.open(path + '.save_appattempt.yaml', 'w') { |f|
+    File.open(path + 'save_appattempt.yaml', 'w') { |f|
       f.write(YAML.dump(app_attempts))
     }
-    File.open(path + '.save_containers.yaml', 'w') { |f|
+    File.open(path + 'save_containers.yaml', 'w') { |f|
       f.write(YAML.dump(containers))
     }
-    File.open(path + '.save_blocks.yaml', 'w') { |f|
+    File.open(path + 'save_blocks.yaml', 'w') { |f|
       f.write(YAML.dump(blocks))
     }
   end
@@ -579,6 +579,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     if @import_mode
       to_csv(@jobs, @applications, @app_attempts, @containers, @blocks)
       # to_csv(@jobs, @blocks)
+      serialize(@jobs, @applications, @app_attempts, @containers, @blocks)
     else
       flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
     end
