@@ -203,7 +203,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
-    if @count % 1000 == 0 || time_difference >= @flush_interval
+    if @count % 10 == 0 || time_difference >= @flush_interval
       if @import_mode
         @eps = (@eps + (@count-@last_count)/(Time.now - @last_flush))/2
         @last_count = @count
@@ -222,8 +222,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           f.puts @count
         }
       else
-
-
+        # real-time mode
         if @available_threads.count > 0
           @available_threads.decrement!
           # if @write_thread.nil? || @write_thread.stop?
@@ -241,11 +240,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
             }
             # serialize(jobs, apps, app_attempts, containers, blocks)
             start = Time.now
-            if import_mode
-              to_csv(jobs, apps, app_attempts, containers, blocks)
-            else
-              flush_to_db(jobs, apps, app_attempts, containers, blocks)
-            end
+            flush_to_db(jobs, apps, app_attempts, containers, blocks)
             # remove_old_data(jobs, blocks)
             end_time = Time.now
             open(path + 'count_return.txt', 'w') { |f|
@@ -302,21 +297,40 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
 
   def flush_to_db(jobs, apps, app_attempts, containers, blocks)
 
-    query = ""
-    blocks.each { |k, v| query += " " + v.to_db }
+    blocks.each { |k, v|
+      v.to_db.each { |query|
+        Neo4j::Session.current.query(query)
+      }
+    }
     # Neo4j::Session.current.query(query)
     # query = ""
-    containers.each { |k, v| query += " " + v.to_db }
+    containers.each { |k, v|
+      v.to_db.each { |query|
+        Neo4j::Session.current.query(query)
+      }
+    }
     # Neo4j::Session.current.query(query)
     # query = ""
-    app_attempts.each { |k, v| query += " " + v.to_db }
+    app_attempts.each { |k, v|
+      v.to_db.each { |query|
+        Neo4j::Session.current.query(query)
+      }
+    }
     # Neo4j::Session.current.query(query)
     # query = ""
-    apps.each { |k, v| query += " " + v.to_db }
+    apps.each { |k, v|
+      v.to_db.each { |query|
+        Neo4j::Session.current.query(query)
+      }
+    }
     # Neo4j::Session.current.query(query)
     # query = ""
-    jobs.each { |k, v| query += " " + v.to_db }
-    Neo4j::Session.current.query(query)
+    jobs.each { |k, v|
+      v.to_db.each { |query|
+        Neo4j::Session.current.query(query)
+      }
+    }
+    # Neo4j::Session.current.query(query)
   end
 
   def to_csv(jobs, apps, app_attempts, containers, blocks)

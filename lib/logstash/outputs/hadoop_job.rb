@@ -2,29 +2,7 @@ require_relative 'hadoop_base'
 
 class HadoopJob < HadoopBase
 
-  # @created
-  # @ID
-  # @submitTime
-  # @launchTime
-  # @firstMapTaskLaunchTime
-  # @firstReduceTaskLaunchTime
-  # @finishTime
-  # @resourcesPerMap
-  # @resourcesPerReduce
-  # @numMaps
-  # @numReduces
-  # @username
-  # @queue
-  # @jobStatus
-  # @mapSlotSeconds
-  # @reduceSlotSeconds
-  # @jobName
-
-  # Hash of applications of this job
-  # @applications
-
-
-  def initialize(id)
+   def initialize(id)
     @id = id
     @last_edited = Time.now
     # @applications = Hash.new
@@ -49,7 +27,6 @@ class HadoopJob < HadoopBase
   end
 
   def parse_data (data)
-
     if data.has_key? 'submitTime'
       @data['submit_time'] = data['submitTime']
     end
@@ -77,18 +54,12 @@ class HadoopJob < HadoopBase
     if data.has_key? 'numReduces'
       @data['num_reduces'] = data['numReduces']
     end
-
-
     if data.has_key? 'username'
       @username = data['username']
-
     end
     if data.has_key? 'queue'
       @queue = data['queue']
-
     end
-
-
     if data.has_key? 'JobStatus'
       @data['job_status'] = data['JobStatus']
     end
@@ -101,7 +72,6 @@ class HadoopJob < HadoopBase
     if data.has_key? 'jobName'
       @data['job_name'] = data['jobName']
     end
-
 
     if data['message'].include?('JobSummary')
       @job_summary = true
@@ -118,26 +88,39 @@ class HadoopJob < HadoopBase
     return @last_edited
   end
 
-  def node
-    if @node.nil?
-      @node = get_create_job(@id)
-    end
-    return @node
-  end
+
 
   def to_db
+    q = ["MERGE (job:job {id: '#{@id}' } ) "]
 
-    node
-    node.update_props(@data)
+    if has_job_summary?
+      query = "MERGE (job:job {id: '#{@id}' } ) "
+    query += " SET
+    job.submit_time = TOINT(#{@data['submit_time']}),
+        job.launch_time = TOINT(#{@data['launch_time']}),
+        job.first_map_task_launch_time = TOINT(#{@data['first_map_task_launch_time']}),
+        job.first_reduce_task_launch_time = TOINT(#{@data['first_reduce_task_launch_time']}),
+        job.finish_time = TOINT(#{@data['finish_time']}),
+        job.resources_per_map = TOINT(#{@data['resources_per_map']}),
+        job.resources_per_reduce = TOINT(#{@data['resources_per_reduce']}),
+        job.num_maps = TOINT(#{@data['num_maps']}),
+        job.num_reduces = TOINT(#{@data['num_reduces']}),
+        job.job_status = #{@data['job_status']},
+        job.map_slot_seconds = TOINT(#{@data['map_slot_seconds']}),
+        job.reduce_slot_seconds = TOINT(#{@data['reduce_slot_seconds']}),
+        job.job_name = '#{@data['job_name']}';"
+      q += [query]
+    end
 
     # add application relations
-    query = " merge (j#{@id}:job {id: '#{@id}'}) "
     @applications.each { |app_id|
       # rel = node.rels(dir: :outgoing, between: app.node)
       # if rel.length == 0
       #   @node.create_rel(:has, app.node)
       # end
-      query += "merge (ju#{app_id}:application {id: '#{app_id}'}) create unique (j#{@id})-[:has]->(ju#{app_id}) "
+      query = " merge (j:job {id: '#{@id}'}) "
+      query += "merge (ju:application {id: '#{app_id}'}) merge (j)-[:has]->(ju); "
+      q += [query]
     }
 
     # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:application {id: '#{app_id}'}) create unique (j)-[:has]->(u)")
@@ -149,7 +132,9 @@ class HadoopJob < HadoopBase
       #   @node.create_rel(:belongs_to, user)
       # end
       # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:user {name: '#{@username}'}) create unique (j)-[:belongs_to]->(u#{@username})")
-      query += "merge (ju#{@username+@id}:user {name: '#{@username}'}) create unique (j#{@id})-[:belongs_to]->(ju#{@username+@id}) "
+      query = " merge (j:job {id: '#{@id}'}) "
+      query += "merge (ju:user {name: '#{@username}'}) merge (j)-[:belongs_to]->(ju); "
+      q += [query]
     end
 
 
@@ -160,10 +145,12 @@ class HadoopJob < HadoopBase
       #   @node.create_rel(:used_queue, q)
       # end
       # Neo4j::Session.current.query("merge (j:job {id: '#{@id}'}) merge (u:queue {name: '#{@queue}'}) create unique (j)-[:used_queue]->(u)")
-      query += "merge (ju#{@queue+@id}:queue {name: '#{@queue}'}) create unique (j#{@id})-[:used_queue]->(ju#{@queue+@id}) "
+      query = " merge (j:job {id: '#{@id}'}) "
+      query += "merge (ju:queue {name: '#{@queue}'}) merge (j)-[:used_queue]->(ju); "
+      q += [query]
     end
 
-    query
+    q
 
   end
 
@@ -182,12 +169,6 @@ class HadoopJob < HadoopBase
         g.puts to_csv2
       }
     end
-
-
-    # @id +','+ @data['submit_time'] +','+ @data['launch_time'] +','+ @data['first_map_task_launch_time'] +','+ @data['first_reduce_task_launch_time'] +
-    #     ','+ @data['finish_time'] +','+ @data['resources_per_map'] +','+ @data['resources_per_reduce'] +','+ @data['num_maps'] +
-    #     ','+ @data['num_reduces'] +','+ @data['job_status'] +','+ @data['map_slot_seconds'] +','+ @data['reduce_slot_seconds'] +
-    #     ','+ @data['job_name'] +','+ @username +','+ @queue
   end
 
   def to_csv2

@@ -75,41 +75,47 @@ class HadoopAppAttempt < HadoopBase
     return @last_edited
   end
 
-  def node
-    if @node.nil?
-      @node = get_create_attempt(@id)
-    end
-    return @node
-  end
-
   def to_db
+    q = [" MERGE (attempt:attempt {id: '#{@id}'}) "]
 
-    node
-    node.update_props(@data)
 
-    query = " merge (c#{@id}:attempt {id: '#{@id}'}) "
+    if (@master_container !=nil )
+      query = " MERGE (attempt:attempt {id: '#{@id}'}) "
+      query += "SET
+		attempt.host_http_adr = '#{@data['host_http_adr']}',
+		attempt.resource = '#{@data['resource']}',
+		attempt.priority = '#{@data['priority']}',
+		attempt.token = '#{@data['token']}';"
+      q += [query]
+    end
+    if (@data.has_key?('final_state'))
+      query = " MERGE (attempt:attempt {id: '#{@id}'}) "
+      query += "SET attempt.final_state = '#{@data['final_state']}',
+		attempt.end_time = TOINT('#{@data['end_time']}');"
+      q += [query]
+    end
+
+
+
     @containers.each { |container_id|
       # rel = node.rels(dir: :outgoing, between: container.node)
       # if rel.length == 0
       #   @node.create_rel(:has, container.node)
       # end
       # Neo4j::Session.current.query("merge (a:attempt {id: '#{@id}'}) merge (b:container {id: '#{container_id}'}) create unique (a)-[:has]->(b)")
-      query += "merge (d#{container_id}:container {id: '#{container_id}'}) create unique (c#{@id})-[:has]->(d#{container_id}) "
+      query = " merge (c:attempt {id: '#{@id}'}) "
+      query += "merge (d:container {id: '#{container_id}'}) merge (c)-[:has]->(d); "
+      q += [query]
     }
+    unless @states.empty?
+      q += states_to_query
+    end
 
 
     unless @master_container == '' || @master_container.nil?
-      # master_host = get_create_container(@master_container)
-      # rel = node.rels(dir: :outgoing, between: master_host)
-      # if rel.length == 0
-      #   @node.create_rel(:master_container, master_host)
-      # end
-      # Neo4j::Session.current.query("merge (a:attempt {id: '#{@id}'}) merge (b:container {name: '#{@master_container}'}) create unique (a)-[:master_container]->(b)")
-      if @containers.include? @master_container
-        query += "create unique (c#{@id})-[:master_container]->(d#{@master_container}) "
-      else
-        query += "merge (d#{@master_container}:container {name: '#{@master_container}'}) create unique (c#{@id})-[:master_container]->(d#{@master_container}) "
-      end
+      query = " merge (c:attempt {id: '#{@id}'}) "
+      query += "merge (d:container {name: '#{@master_container}'}) merge (c)-[:master_container]->(d); "
+      q += [query]
     end
 
     unless @host == '' || @host.nil?
@@ -119,9 +125,11 @@ class HadoopAppAttempt < HadoopBase
       #   @node.create_rel(:hosted_on, h)
       # end
       # Neo4j::Session.current.query("merge (a:attempt {id: '#{@id}'}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
-      query += "merge (d#{s(@host+@id)}:host {name: '#{@host}'}) create unique (c#{@id})-[:hosted_on]->(d#{s(@host+@id)}) "
+      query = " merge (c:attempt {id: '#{@id}'}) "
+      query += "merge (d:host {name: '#{@host}'}) merge (c)-[:hosted_on]->(d)}); "
+      q += [query]
     end
-   query
+   q
 
   end
 
@@ -169,4 +177,9 @@ class HadoopAppAttempt < HadoopBase
   def get_containers
     @containers
   end
+
+  def match_query
+    " merge (a:attempt {id: '#{@id}'}) "
+  end
+
 end

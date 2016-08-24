@@ -78,13 +78,6 @@ class HadoopHDFSBlock < HadoopBase
     return @last_edited
   end
 
-  def node
-    if @node.nil?
-      @node = get_create_block(@id)
-    end
-    return @node
-  end
-
   # def filename
   #   file = get_create_file(@path)
   #   rel = node.rels(dir: :outgoing, between: file)
@@ -96,15 +89,24 @@ class HadoopHDFSBlock < HadoopBase
 
 
   def to_db
+    q = [ "MERGE (block:block {id: '#{@id}'})  "]
 
-    node
-    node.update_props(@data)
+    if @data.has_key? 'namespace'
+      query = "MERGE (block:block {id: '#{@id}'})  "
+      query += " set block.namespace = '#{@data['namespace']}';"
+    end
+    if @data.has_key? 'size'
+      query = "MERGE (block:block {id: '#{@id}'})  "
+      query += " set block.size = #{@data['size']};"
+    end
+    q += [query]
 
-    query = " merge (aa#{@id}:block {id: '#{@id}'})  "
 
     unless @path == '' || @path.nil?
       # Neo4j::Session.current.query("merge (b:file {name: '#{@path}'}) create unique (a#{@id})-[:belongs_to]->(b)")
-      query += "merge (path_#{s(@path)}_#{@id}:file {name: '#{@path}'}) create unique (aa#{@id})-[:belongs_to]->(path_#{s(@path)}_#{@id}) "
+      query = " merge (aa:block {id: '#{@id}'})  "
+      query += "merge (path:file {name: '#{@path}'}) merge (aa)-[:belongs_to]->(path); "
+      q += [query]
     end
 
 
@@ -115,7 +117,9 @@ class HadoopHDFSBlock < HadoopBase
       #   @node.create_rel(:source_host, source_host)
       # end
       # Neo4j::Session.current.query(" merge (b:host {name: '#{host}'}) create unique (a#{@id})-[:source_host]->(b)")
-      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:source_host {timestamp: '#{timestamp}'}]->(bb#{s(host+@id)}) "
+      query = " merge (aa:block {id: '#{@id}'})  "
+      query += " merge (bb:host {name: '#{host}'}) merge (aa)-[:source_host {timestamp: '#{timestamp}'}]->(bb); "
+      q += [query]
     }
     @destination_host.each { |timestamp, host|
       # dest_host = get_create_host(host)
@@ -124,21 +128,35 @@ class HadoopHDFSBlock < HadoopBase
       #   @node.create_rel(:destination_host, dest_host)
       # end
       # Neo4j::Session.current.query(" merge (b:host {name: '#{host}'}) create unique (a#{@id})-[:destination_host]->(b)")
-      query += " merge (bb#{s(host+@id)}:host {name: '#{host}'}) create unique (aa#{@id})-[:destination_host {timestamp: '#{timestamp}'}]->(bb#{s(host+@id)}) "
+      query = " merge (aa:block {id: '#{@id}'})  "
+      query += " merge (bb:host {name: '#{host}'}) merge (aa)-[:destination_host {timestamp: '#{timestamp}'}]->(bb); "
+      q += [query]
     }
-    query
+
+    @states.each { |timestamp, state|
+      query = "MERGE (block:block {id: '#{@id}'}) MERGE (prev_state:state {name: '#{state}'}) MERGE (a)-[:state {timestamp: '#{timestamp}'}]->(prev_state);"
+      q += [query]
+    }
+
+    @replica.each { |timestamp, replica|
+      query = "MERGE (block:block {id: '#{@id}'}) CREATE (replica:block_replica {BlockUCState: '#{replica[1]}', primaryNodeIndex: '#{replica[2]}',
+		replicas: '#{replica[3]}' }) CREATE (a)-[:replica {timestamp: '#{timestamp}'}]->(replica);"
+      q += [query]
+    }
+
+    q
 
   end
 
   def to_csv(path)
     if @data.has_key? 'namespace'
-    File.open(path + 'blocks.csv', 'a') { |f|
-      f.puts @id +','+ @data['namespace']
-    }
+      File.open(path + 'blocks.csv', 'a') { |f|
+        f.puts @id +','+ @data['namespace']
+      }
     end
     unless @path.nil?
       File.open(path + 'block_path.csv', 'a') { |f|
-        f.puts @id +','+  @path
+        f.puts @id +','+ @path
       }
     end
     if @data.has_key? 'size'

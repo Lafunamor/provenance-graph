@@ -105,9 +105,9 @@ class HadoopBase
   def states_to_csv
     string = ''
     unless @states.empty?
-    @states.each{|k,v|
-      string += "#{@id},#{k},#{v[0]},#{v[1]}\n"
-    }
+      @states.each { |k, v|
+        string += "#{@id},#{k},#{v[0]},#{v[1]}\n"
+      }
     end
     string
   end
@@ -115,10 +115,40 @@ class HadoopBase
   def events_to_csv
     string = ''
     unless @events.empty?
-    @events.each{|k,v|
-      string += "#{@id},#{k},#{v}\n"
+      @events.each { |k, v|
+        string += "#{@id},#{k},#{v}\n"
+      }
+    end
+    string
+  end
+
+  def states_to_query
+    q =[]
+    @states.each { |timestamp, state|
+      string = match_query
+      string += " MERGE (prev_state:state {name: '#{state[0]}'}) MERGE (a)-[:from {timestamp: '#{timestamp}'}]->(prev_state);"
+      q += [string]
+
+      string = match_query
+      string +="MERGE (new_state:state {name: '#{state[1]}'}) MERGE (a)-[:to {timestamp: '#{timestamp}'}]->(new_state);"
+      q += [string]
     }
+    q
   end
-  string
+
+  def events_to_query
+    q =[]
+    @events.each { |timestamp, event|
+      string = match_query
+      string += " MERGE (event:event {name: '#{event}'})
+      MERGE (a)-[:has {timestamp: '#{timestamp}'}]->(event);"
+      q += [string]
+    }
+    q
   end
+
+  def match_query
+    return ''
+  end
+
 end

@@ -75,27 +75,60 @@ class HadoopContainer < HadoopBase
     return @last_edited
   end
 
-  def node
-    if @node.nil?
-      @node = get_create_container(@id)
-    end
-    return @node
-  end
-
   def to_db
+q = ["MERGE (container:container {id: '#{@id}'})"]
 
-    node
-    node.update_props(@data)
+    if @data.has_key? 'localizer_created_at'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.localizer_created_at = '#{@data['localizer_created_at']}';"
+      q += [query]
+    end
+    if @data.has_key? 'succeeded_at'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.succeeded_at = '#{@data['succeeded_at']}';"
+      q += [query]
+    end
+    if @data.has_key? 'clean_up_time'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.clean_up_time = '#{@data['clean_up_time']}';"
+      q += [query]
+    end
+    if @data.has_key? 'added_to_app_at'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.added_to_app_at = '#{@data['added_to_app_at']}';"
+      q += [query]
+    end
+    if @data.has_key? 'removed_from_app'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.removed_from_app = '#{@data['removed_from_app']}';"
+      q += [query]
+    end
+    if @data.has_key? 'stopped_at'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.stopped_at = '#{ @data['stopped_at']}';"
+      q += [query]
+    end
+    if @data.has_key? 'started_at'
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.started_at = '#{@data['started_at']}', container.arguments = '#{@data['arguments']}';"
+      q += [query]
+    end
+    if (@data.has_key?('capacity') && @host != nil)
+      query = "MERGE (container:container {id: '#{@id}'}) set "
+      query += "container.capacity = #{@data['capacity']};"
+      q += [query]
+    end
 
-    query = " merge (e#{@id}:container {id: '#{@id}'}) "
     unless @host == '' || @path.nil?
       # h = get_create_host(@host)
       # rel = node.rels(dir: :outgoing, between: h)
       # if rel.length == 0
       #   @node.create_rel(:hosted_on, h)
       # end
-      # Neo4j::Session.current.query("merge (a:container {id: '#{@id}'}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
-      query += "merge (f#{s(@host+@id)}:host {name: '#{@host}'}) create unique (e#{@id})-[:hosted_on]->(f#{s(@host+@id)}) "
+      # Neo4j::Session.current.query("merge (a:container {id: ''#{@id}''}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
+      query = " merge (e:container {id: ''#{@id}''}) "
+      query += "merge (f:host {name: '#{@host}'}) merge (e)-[:hosted_on]->(f); "
+      q += [query]
     end
 
     unless @username == '' || @username.nil?
@@ -104,56 +137,90 @@ class HadoopContainer < HadoopBase
       # if rel.length == 0
       #   @node.create_rel(:belongs_to, user)
       # end
-      # Neo4j::Session.current.query("merge (a:container {id: '#{@id}'}) merge (b#{@username}:user {name: '#{@username}'}) create unique (a#{@id})-[:belongs_to]->(b#{@username})")
-      query += " merge (f#{@username+@id}:user {name: '#{@username}'}) create unique (e#{@id})-[:belongs_to]->(f#{@username+@id}) "
+      # Neo4j::Session.current.query("merge (a:container {id: ''#{@id}''}) merge (b#{@username}:user {name: '#{@username}'}) create unique (a'#{@id}')-[:belongs_to]->(b#{@username})")
+      query = merge_query
+      query += " merge (f:user {name: '#{@username}'}) merge (e)-[:belongs_to]->(f); "
+      q += [query]
     end
-    query
+
+    unless @states.empty?
+      q += states_to_query
+    end
+
+    unless @events.empty?
+      q += events_to_query
+    end
+
+    @container_states.each {|timestamp, state|
+      query = "MERGE (a:container {id: '#{@id}'})"
+      query += " merge (state:state {name: '#{state}'}) merge (a)-[:transitioned_to {timestamp: '#{timestamp}'}]->(state);"
+      q += [query]
+    }
+
+    @resource_usage.each {|timestamp, usage|
+    query = "MERGE (a:container {id: '#{@id}'})
+    CREATE (res:resource_usage {ProcessTreeID: '#{usage[1]}',
+        UsedPysicalMemory: '#{usage[2]}',
+        AvailablePhysicalMemory: '#{usage[3]}',
+        UsedVirtualMemory: '#{usage[4]}',
+        AvailableVirtualMemory: '#{usage[5]}'
+    })
+
+    CREATE (a)-[:used {timestamp: '#{timestamp}'}]->(res);"
+    q += [query]
+    }
+
+    q
+  end
+
+  def merge_query
+    " merge (a:container {id: '#{@id}'}) "
   end
 
   def to_csv(path)
     unless @username.nil?
-    File.open(path + 'container_user.csv', 'a') { |f|
-      f.puts @id +','+ @username +','+ @data['start_request_time']
-    }
+      File.open(path + 'container_user.csv', 'a') { |f|
+        f.puts @id +','+ @username +','+ @data['start_request_time']
+      }
     end
     if @data.has_key? 'localizer_created_at'
-    File.open(path + 'container_localizer_created.csv', 'a') { |f|
-      f.puts @id +','+  @data['localizer_created_at']
-    }
+      File.open(path + 'container_localizer_created.csv', 'a') { |f|
+        f.puts @id +','+ @data['localizer_created_at']
+      }
     end
     if @data.has_key? 'succeeded_at'
       File.open(path + 'container_succeeded_at.csv', 'a') { |f|
-        f.puts @id +','+  @data['succeeded_at']
+        f.puts @id +','+ @data['succeeded_at']
       }
     end
     if @data.has_key? 'clean_up_time'
       File.open(path + 'container_clean_up_time.csv', 'a') { |f|
-        f.puts @id +','+  @data['clean_up_time']
+        f.puts @id +','+ @data['clean_up_time']
       }
     end
     if @data.has_key? 'added_to_app_at'
       File.open(path + 'container_added_to_app_at.csv', 'a') { |f|
-        f.puts @id +','+  @data['added_to_app_at']
+        f.puts @id +','+ @data['added_to_app_at']
       }
     end
     if @data.has_key? 'removed_from_app'
       File.open(path + 'container_removed_from_app.csv', 'a') { |f|
-        f.puts @id +','+  @data['removed_from_app']
+        f.puts @id +','+ @data['removed_from_app']
       }
     end
     if @data.has_key? 'stopped_at'
       File.open(path + 'container_stopped_at.csv', 'a') { |f|
-        f.puts @id +','+  @data['stopped_at']
+        f.puts @id +','+ @data['stopped_at']
       }
     end
     if @data.has_key? 'started_at'
       File.open(path + 'container_started_at.csv', 'a') { |f|
-        f.puts @id +','+  @data['started_at']+','+  @data['arguments']
+        f.puts @id +','+ @data['started_at']+','+ @data['arguments']
       }
     end
     if (@data.has_key?('capacity') && @host != nil)
       File.open(path + 'container_host.csv', 'a') { |f|
-        f.puts @id +',"'+  @data['capacity'] +'",'+@host
+        f.puts @id +',"'+ @data['capacity'] +'",'+@host
       }
     end
 

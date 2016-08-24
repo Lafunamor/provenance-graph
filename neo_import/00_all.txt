@@ -72,8 +72,8 @@ USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/apps_states.csv' as line 
 with line
 
-MERGE (prev_state:state {name: line[3]})
-MERGE (new_state:state {name: line[2]})
+MERGE (prev_state:state {name: line[2]})
+MERGE (new_state:state {name: line[3]})
 MERGE (a:application {id: line[0]}) 
 
 
@@ -149,8 +149,8 @@ USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/app_attempt_states.csv' as line 
 with line
 
-MERGE (prev_state:state {name: line[3]})
-MERGE (new_state:state {name: line[2]})
+MERGE (prev_state:state {name: line[2]})
+MERGE (new_state:state {name: line[3]})
 MERGE (a:attempt {id: line[0]}) 
 
 
@@ -268,7 +268,7 @@ USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_states.csv' as line 
 with line
 
-MERGE (prev_state:state {name: line[3]})
+MERGE (prev_state:state {name: line[2]})
 MERGE (a:container {id: line[0]}) 
 
 
@@ -278,7 +278,7 @@ USING PERIODIC COMMIT
 LOAD CSV FROM 'file:/container_states.csv' as line 
 with line
 
-MERGE (new_state:state {name: line[2]})
+MERGE (new_state:state {name: line[3]})
 MERGE (a:container {id: line[0]}) 
 
 MERGE (a)-[:to {timestamp: (line[1])}]->(new_state)

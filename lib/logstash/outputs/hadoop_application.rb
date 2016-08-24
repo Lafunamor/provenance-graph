@@ -5,13 +5,6 @@ require_relative 'hadoop_base'
 
 class HadoopApplication < HadoopBase
 
-  # # HashMap of state changes
-  # @AppStates
-  # # HashMap of Events
-  # @Events
-  # # Hash of AppAttempts
-  # @app_attempts
-
   def initialize(id)
     @id = id
     @last_edited = Time.now
@@ -113,13 +106,9 @@ class HadoopApplication < HadoopBase
 
   def add_hdfs_trace(data, import_mode)
     @blocks[data['timestamp']]= [data['namespace'], data['Block_ID'], data['operation']]
-    unless @block_ids.include? data['Block_ID']
-      @block_ids+= [data['Block_ID']]
-    end
-    unless import_mode
-      Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:block {id: '#{data['Block_ID']}'}) create unique (a)-[r:#{data['operation']} {timestamp: #{data['timestamp']}}]->(b)")
-      # node.create_rel(data['operation'], block.node, timestamp: data['timestamp'])
-    end
+    # unless @block_ids.include? data['Block_ID']
+    #   @block_ids+= [data['Block_ID']]
+    # end
     return true
   end
 
@@ -128,47 +117,62 @@ class HadoopApplication < HadoopBase
     return @last_edited
   end
 
-  def node
-    if @node.nil?
-      @node = get_create_application(@id)
-    end
-    return @node
-  end
 
   def to_db
 
-    node
-    node.update_props(@data)
+    q = [" merge (app:application {id: '#{@id}'}) "]
 
-    query = " merge (a#{@id}:application {id: '#{@id}'}) "
+
+    if (@data.has_key?('app_state') && @data.has_key?('app_name') && @data.has_key?('finish_time'))
+      query = " merge (app:application {id: '#{@id}'}) "
+      query += " SET
+		    app.app_state = '#{@data['app_state']}',
+		    app.app_name = '#{@data['app_name']}',
+		    app.finish_time = TOINT(#{@data['finish_time']}),
+		    app.tracking_url = '#{@data['tracking_url']}',
+		    app.start_time = TOINT(#{@data['start_time']}),
+		    app.final_state = '#{@data['final_state']}';"
+      q += [query]
+    end
+
+
     @app_attempts.each { |attempt_id|
       # rel = node.rels(dir: :outgoing, between: attempt.node)
       # if rel.length == 0
       #   @node.create_rel(:has, attempt.node)
       # end
       # Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:attempt {id: '#{attempt_id}'}) create unique (a)-[:has]->(b)")
-      query += "merge (b#{attempt_id}:attempt {id: '#{attempt_id}'}) create unique (a#{@id})-[:has]->(b#{attempt_id}) "
+      query = " merge (a:application {id: '#{@id}'}) "
+      query += "merge (b:attempt {id: '#{attempt_id}'}) merge (a)-[:has]->(b); "
+      q += [query]
     }
 
+    unless @states.empty?
+      q += states_to_query
+    end
+
+    unless @events.empty?
+      q += events_to_query
+    end
+
+    unless @blocks.empty?
+      @blocks.each{ |timestamp, block|
+        query = " MERGE (a:application {id: '#{@id}'}) MERGE (block:block {id: '#{block[1]}'}) MERGE  (a)-[:#{block[2]} {timestamp: '#{timestamp}'}]->(block); "
+      }
+      q += [query]
+    end
 
     unless @username == '' || @username.nil?
-      # user = get_create_username(@username)
-      # rel = node.rels(dir: :outgoing, between: user)
-      # if rel.length == 0
-      #   @node.create_rel(:belongs_to, user)
-      # end
       # Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:user {name: '#{@username}'}) create unique (a)-[:belongs_to]->(b)")
-      query += "merge (b#{@username+@id}:user {name: '#{@username}'}) create unique (a#{@id})-[:belongs_to]->(b#{@username+@id}) "
+      query = " merge (a#{@id}:application {id: '#{@id}'}) "
+      query += "merge (b#{@username+@id}:user {name: '#{@username}'}) merge (a#{@id})-[:belongs_to]->(b#{@username+@id}); "
+      q += [query]
     end
 
     unless @queue == '' || @queue.nil?
-      # q = get_create_queue(@queue)
-      # rel = node.rels(dir: :outgoing, between: q)
-      # if rel.length == 0
-      #   @node.create_rel(:used_queue, q)
-      # end
-      # Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:queue {name: '#{@queue}'}) (a)-[:used_queue]->(b)")
-      query += "merge (b#{@queue+@id}:queue {name: '#{@queue}'}) (a#{@id})-[:used_queue]->(b#{@queue+@id}) "
+      query = " merge (a#{@id}:application {id: '#{@id}'}) "
+      query += "merge (b#{@queue+@id}:queue {name: '#{@queue}'}) merge (a#{@id})-[:used_queue]->(b#{@queue+@id}); "
+      q += [query]
     end
 
     unless @app_master_host == '' || @app_master_host.nil?
@@ -178,9 +182,11 @@ class HadoopApplication < HadoopBase
       #   @node.create_rel(:app_master, h)
       # end
       # Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:host {name: '#{@app_master_host}'}) (a)-[:app_master]->(b)")
-      query += "merge (b#{@app_master_host}:host {name: '#{@app_master_host}'}) (a#{@id})-[:app_master]->(b#{@app_master_host}) "
+      query = " merge (a#{@id}:application {id: '#{@id}'}) "
+      query += "merge (b#{@app_master_host}:host {name: '#{@app_master_host}'}) merge (a#{@id})-[:app_master]->(b#{@app_master_host}); "
+      q += [query]
     end
-    query
+    q
 
   end
 
@@ -253,4 +259,9 @@ class HadoopApplication < HadoopBase
   def get_attempts
     @app_attempts
   end
+
+  def match_query
+    " merge (a:application {id: '#{@id}'}) "
+  end
+
 end
