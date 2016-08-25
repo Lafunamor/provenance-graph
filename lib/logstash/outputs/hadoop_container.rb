@@ -115,7 +115,7 @@ q = ["MERGE (container:container {id: '#{@id}'})"]
     end
     if (@data.has_key?('capacity') && @host != nil)
       query = "MERGE (container:container {id: '#{@id}'}) set "
-      query += "container.capacity = #{@data['capacity']};"
+      query += "container.capacity = '#{@data['capacity']}';"
       q += [query]
     end
 

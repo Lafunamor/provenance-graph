@@ -46,7 +46,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     if @import_mode
       @available_threads = SynchronizedCounter.new 1
     else
-      @available_threads = SynchronizedCounter.new 10
+      @available_threads = SynchronizedCounter.new 100
     end
 
     # deserialize
@@ -74,9 +74,9 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       # Using Neo4j Server Cypher Database
       begin
         @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
-          # @session = Neo4j::Session.open(:server_db, "http://127.0.0.1:7474", basic_auth: {username: "neo4j", password: "neo4jpassword"})
-          # @session = Neo4j::Session.open(:embedded_db, '//var/lib/neo4j/data', auto_commit: true)
-          # @session.start
+
+           # @session = Neo4j::Session.open(:embedded_db, '/var/lib/neo4j/data', auto_commit: true)
+           @session.start
       rescue
         @logger.error('Error: Could not connect to neo4j DB', :plugin => self)
         exit
@@ -203,7 +203,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
-    if @count % 10 == 0 || time_difference >= @flush_interval
+    if @count % 100 == 0 || time_difference >= @flush_interval
       if @import_mode
         @eps = (@eps + (@count-@last_count)/(Time.now - @last_flush))/2
         @last_count = @count
