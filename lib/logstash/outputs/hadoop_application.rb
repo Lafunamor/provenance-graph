@@ -83,7 +83,7 @@ class HadoopApplication < HadoopBase
     @queue = data['queue']
     # end
     # if data.has_key? 'finishTime'
-    @data['finish_time'] = data['finishTime']
+    @data['finish_time'] = data['FinishTime']
     # end
     # if data.has_key? 'TrackingURL'
     @data['tracking_url'] = data['TrackingURL']
