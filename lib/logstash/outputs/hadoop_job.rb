@@ -2,7 +2,7 @@ require_relative 'hadoop_base'
 
 class HadoopJob < HadoopBase
 
-   def initialize(id)
+  def initialize(id)
     @id = id
     @last_edited = Time.now
     # @applications = Hash.new
@@ -13,6 +13,8 @@ class HadoopJob < HadoopBase
     #     @data['finish_time'] = @data['resources_per_map'] = @data['resources_per_reduce'] = @data['num_maps'] =
     #         @data['num_reduces'] = @data['job_status'] = @data['map_slot_seconds'] = @data['reduce_slot_seconds'] =
     #             @data['job_name'] = @username = @queue = ''
+    @log_processed_at = Time.now
+    @initial_to_db = true
   end
 
 
@@ -89,13 +91,18 @@ class HadoopJob < HadoopBase
   end
 
 
-
   def to_db
-    q = ["MERGE (job:job {id: '#{@id}' } ) "]
+    if @initial_to_db
+      q = ["MERGE (job:job {id: '#{@id}' } ) set job.log_processed_at = coalesce(job.log_processed_at,'#{@log_processed_at}'), job.db_timestamp = coalesce(job.db_timestamp, timestamp()) "]
+      @initial_to_db = false
+    else
+      q = ["MERGE (job:job {id: '#{@id}' } ) "]
+    end
+
 
     if has_job_summary?
       query = "MERGE (job:job {id: '#{@id}' } ) "
-    query += " SET
+      query += " SET
     job.submit_time = TOINT(#{@data['submit_time']}),
         job.launch_time = TOINT(#{@data['launch_time']}),
         job.first_map_task_launch_time = TOINT(#{@data['first_map_task_launch_time']}),

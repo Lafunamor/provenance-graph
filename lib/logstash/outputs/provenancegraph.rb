@@ -203,7 +203,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     time_difference = Time.now - @last_flush
     @logger.debug('time difference: ' + time_difference.to_s, :plugin => self)
     # if time_difference >= 30
-    if @count % 100 == 0 || time_difference >= @flush_interval
+    if @count % 100 == 0 #|| time_difference >= @flush_interval
       if @import_mode
         @eps = (@eps + (@count-@last_count)/(Time.now - @last_flush))/2
         @last_count = @count
