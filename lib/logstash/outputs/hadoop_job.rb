@@ -13,7 +13,7 @@ class HadoopJob < HadoopBase
     #     @data['finish_time'] = @data['resources_per_map'] = @data['resources_per_reduce'] = @data['num_maps'] =
     #         @data['num_reduces'] = @data['job_status'] = @data['map_slot_seconds'] = @data['reduce_slot_seconds'] =
     #             @data['job_name'] = @username = @queue = ''
-    @log_processed_at = Time.now
+    @log_processed_at = (Time.now.to_f * 1000).to_i
     @initial_to_db = true
   end
 
