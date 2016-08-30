@@ -112,7 +112,7 @@ class HadoopJob < HadoopBase
         job.resources_per_reduce = TOINT(#{@data['resources_per_reduce']}),
         job.num_maps = TOINT(#{@data['num_maps']}),
         job.num_reduces = TOINT(#{@data['num_reduces']}),
-        job.job_status = #{@data['job_status']},
+        job.job_status = '#{@data['job_status']}',
         job.map_slot_seconds = TOINT(#{@data['map_slot_seconds']}),
         job.reduce_slot_seconds = TOINT(#{@data['reduce_slot_seconds']}),
         job.job_name = '#{@data['job_name']}';"
