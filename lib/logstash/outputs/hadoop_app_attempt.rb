@@ -126,7 +126,7 @@ class HadoopAppAttempt < HadoopBase
       # end
       # Neo4j::Session.current.query("merge (a:attempt {id: '#{@id}'}) merge (b:host {name: '#{@host}'}) create unique (a)-[:hosted_on]->(b)")
       query = " merge (c:attempt {id: '#{@id}'}) "
-      query += "merge (d:host {name: '#{@host}'}) merge (c)-[:hosted_on]->(d)}); "
+      query += "merge (d:host {name: '#{@host}'}) merge (c)-[:hosted_on]->(d); "
       q += [query]
     end
    q
