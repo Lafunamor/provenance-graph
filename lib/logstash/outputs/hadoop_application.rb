@@ -164,14 +164,14 @@ class HadoopApplication < HadoopBase
 
     unless @username == '' || @username.nil?
       # Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:user {name: '#{@username}'}) create unique (a)-[:belongs_to]->(b)")
-      query = " merge (a#{@id}:application {id: '#{@id}'}) "
-      query += "merge (b#{@username+@id}:user {name: '#{@username}'}) merge (a#{@id})-[:belongs_to]->(b#{@username+@id}); "
+      query = " merge (a:application {id: '#{@id}'}) "
+      query += "merge (b:user {name: '#{@username}'}) merge (a)-[:belongs_to]->(b); "
       q += [query]
     end
 
     unless @queue == '' || @queue.nil?
-      query = " merge (a#{@id}:application {id: '#{@id}'}) "
-      query += "merge (b#{@queue+@id}:queue {name: '#{@queue}'}) merge (a#{@id})-[:used_queue]->(b#{@queue+@id}); "
+      query = " merge (a:application {id: '#{@id}'}) "
+      query += "merge (b:queue {name: '#{@queue}'}) merge (a)-[:used_queue]->(b); "
       q += [query]
     end
 
@@ -182,8 +182,8 @@ class HadoopApplication < HadoopBase
       #   @node.create_rel(:app_master, h)
       # end
       # Neo4j::Session.current.query("merge (a:application {id: '#{@id}'}) merge (b:host {name: '#{@app_master_host}'}) (a)-[:app_master]->(b)")
-      query = " merge (a#{@id}:application {id: '#{@id}'}) "
-      query += "merge (b#{@app_master_host}:host {name: '#{@app_master_host}'}) merge (a#{@id})-[:app_master]->(b#{@app_master_host}); "
+      query = " merge (a:application {id: '#{@id}'}) "
+      query += "merge (b:host {name: '#{@app_master_host}'}) merge (a)-[:app_master]->(b); "
       q += [query]
     end
     q
