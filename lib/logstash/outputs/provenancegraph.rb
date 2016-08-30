@@ -76,7 +76,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         @session = Neo4j::Session.open(:server_db, @neo4j_server, basic_auth: {username: @neo4j_username, password: @neo4j_password})
 
            # @session = Neo4j::Session.open(:embedded_db, '/var/lib/neo4j/data', auto_commit: true)
-           @session.start
+           # @session.start
       rescue
         @logger.error('Error: Could not connect to neo4j DB', :plugin => self)
         exit
