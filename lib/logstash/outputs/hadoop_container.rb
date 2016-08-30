@@ -62,7 +62,7 @@ class HadoopContainer < HadoopBase
       @data['stopped_at'] = data['timestamp']
     elsif data.has_key? 'Arguments'
       @data['started_at'] = data['timestamp']
-      @data['arguments'] = data['Arguments']
+      @data['arguments'] = data['Arguments'].gsub('\'', '"')
     else
       return false
 
