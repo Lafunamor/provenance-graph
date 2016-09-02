@@ -49,7 +49,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       @available_threads = SynchronizedCounter.new 100
     end
 
-    # deserialize
+    deserialize
     # if @jobs.nil? || @jobs == false
     @jobs = ThreadSafe::Hash.new
     # end
@@ -278,19 +278,19 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   end
 
   def serialize(jobs, apps, app_attempts, containers, blocks)
-    File.open(path + 'save_job.yaml', 'w') { |f|
+    File.open(path + '.save_job.yaml', 'w') { |f|
       f.write(YAML.dump(jobs))
     }
-    File.open(path + 'save_apps.yaml', 'w') { |f|
+    File.open(path + '.save_apps.yaml', 'w') { |f|
       f.write(YAML.dump(apps))
     }
-    File.open(path + 'save_appattempt.yaml', 'w') { |f|
+    File.open(path + '.save_appattempt.yaml', 'w') { |f|
       f.write(YAML.dump(app_attempts))
     }
-    File.open(path + 'save_containers.yaml', 'w') { |f|
+    File.open(path + '.save_containers.yaml', 'w') { |f|
       f.write(YAML.dump(containers))
     }
-    File.open(path + 'save_blocks.yaml', 'w') { |f|
+    File.open(path + '.save_blocks.yaml', 'w') { |f|
       f.write(YAML.dump(blocks))
     }
   end
@@ -349,100 +349,6 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     blocks.each { |k, v|
       v.to_csv(path)
     }
-
-    # jobs = apps = app_attempts = containers = blocks = []
-    # jobs_copy.each { |key, value|
-    #   if value.has_job_summary?
-    #     jobs += value
-    #   end
-    # }
-    # jobs.each { |job|
-    #   apps += job.get_apps
-    # }
-    # apps.each { |app|
-    #   app_attempts += app.get_attempts
-    # }
-    # app_attempts.each { |attempt|
-    #   containers += attempt.get_containers
-    # }
-    # blocks_copy.each { |k, v|
-    #   if v.enough_data?
-    #     blocks += [v]
-    #   end
-    # }
-    # File.open(path + 'blocks.csv', 'a') { |f|
-    #   File.open(path + 'block_states.csv', 'a') { |i|
-    #     File.open(path + 'block_source_hosts.csv', 'a') { |g|
-    #       File.open(path + 'block_destination_hosts.csv', 'a') { |h|
-    #         File.open(path + 'block_replica_states.csv', 'a') { |e|
-    #           blocks.each { |k, v|
-    #             unless_empty? f, v.to_csv
-    #             unless_empty? g, v.source_hosts_to_csv
-    #             unless_empty? h, v.dest_hosts_to_csv
-    #             unless_empty? i, v.states_to_csv
-    #             unless_empty? e, v.replica_states_to_csv
-    #           }
-    #         }
-    #       }
-    #     }
-    #   }
-    # }
-    # File.open(path + 'containers.csv', 'a') { |f|
-    # File.open(path + 'container_states.csv', 'a') { |i|
-    #   File.open(path + 'container_resource_usage.csv', 'a') { |h|
-    # File.open(path + 'container_state_transitions.csv', 'a') { |g|
-    # File.open(path + 'container_events.csv', 'a') { |j|
-    #           containers.each { |v|
-    #             unless_empty? f, v.to_csv
-    #             unless_empty? g, v.container_states_to_csv
-    #             unless_empty? h, v.resource_usage_to_csv
-    #             unless_empty? i, v.states_to_csv
-    #             unless_empty? j, v.events_to_csv
-    #           }
-    #         }
-    #       }
-    #     }
-    #   }
-    # }
-    # File.open(path + 'app_attempts.csv', 'a') { |f|
-    #   File.open(path + 'attempts_containers.csv', 'a') { |g|
-    #     File.open(path + 'app_attempt_states.csv', 'a') { |i|
-    #       File.open(path + 'app_attempt_events.csv', 'a') { |j|
-    #         app_attempts.each { |v|
-    #           unless_empty? f, v.to_csv
-    #           unless_empty? g, v.to_csv2
-    #           unless_empty? i, v.states_to_csv
-    #           unless_empty? j, v.events_to_csv
-    #         }
-    #       }
-    #     }
-    #   }
-    # }
-    # File.open(path + 'apps.csv', 'a') { |f|
-    #   File.open(path + 'apps_attempts.csv', 'a') { |g|
-    #     File.open(path + 'apps_blocks.csv', 'a') { |h|
-    #       File.open(path + 'apps_states.csv', 'a') { |i|
-    #         File.open(path + 'apps_events.csv', 'a') { |j|
-    #           apps.each { |v|
-    #             unless_empty? f, v.to_csv
-    #             unless_empty? g, v.to_csv2
-    #             unless_empty? h, v.to_csv3
-    #             unless_empty? i, v.states_to_csv
-    #             unless_empty? j, v.events_to_csv
-    #           }
-    #         }
-    #       }
-    #     }
-    #   }
-    # }
-    # File.open(path + 'jobs.csv', 'a') { |f|
-    #   File.open(path + 'jobs_apps.csv', 'a') { |g|
-    #     jobs.each { |v|
-    #       f.puts v.to_csv
-    #       g.puts v.to_csv2
-    #     }
-    #   }
-    # }
   end
 
   def unless_empty?(file, string)
@@ -590,13 +496,14 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
   # handles shutdown of pipeline
   def close
     @logger.info('clean shutdown, flushing data', :plugin => self)
-    if @import_mode
-      to_csv(@jobs, @applications, @app_attempts, @containers, @blocks)
-      # to_csv(@jobs, @blocks)
-      serialize(@jobs, @applications, @app_attempts, @containers, @blocks)
-    else
-      flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
-    end
+    serialize(@jobs,@applications,@app_attempts,@containers,@blocks)
+    # if @import_mode
+    #   to_csv(@jobs, @applications, @app_attempts, @containers, @blocks)
+    #   # to_csv(@jobs, @blocks)
+    #   serialize(@jobs, @applications, @app_attempts, @containers, @blocks)
+    # else
+    #   flush_to_db(@jobs, @applications, @app_attempts, @containers, @blocks)
+    # end
     @logger.info('writing to disk completed, shutting down', :plugin => self)
   end
 
