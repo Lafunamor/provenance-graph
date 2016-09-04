@@ -72,7 +72,7 @@ class HadoopJob < HadoopBase
       @data['reduce_slot_seconds'] = data['reduceSlotSeconds']
     end
     if data.has_key? 'jobName'
-      @data['job_name'] = data['jobName']
+      @data['job_name'] = s(data['jobName'])
     end
 
     if data['message'].include?('JobSummary')
