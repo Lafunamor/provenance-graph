@@ -138,7 +138,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       app_id = ids[2]+'_'+ ids[3]
       block_id = data['Block_ID']
       if ids[1]== 'attempt'
-        type = 'hdfs_trace'
+        # type = 'hdfs_trace'
       end
     elsif data.has_key?('ApplicationID')
       ids = data['ApplicationID'].split('_')
@@ -151,7 +151,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
       type = 'job'
     elsif data.has_key?('Block_ID')
       block_id = data["Block_ID"]
-      type = 'hdfs'
+      # type = 'hdfs'
     end
     if type.nil?
       return
