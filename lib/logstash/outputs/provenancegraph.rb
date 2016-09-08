@@ -46,7 +46,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     if @import_mode
       @available_threads = SynchronizedCounter.new 1
     else
-      @available_threads = SynchronizedCounter.new 100
+      @available_threads = SynchronizedCounter.new 1000
     end
 
     deserialize
