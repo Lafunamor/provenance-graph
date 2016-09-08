@@ -172,10 +172,10 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
           unhandled data
         end
       when 'hdfs_trace'
-        app = get_create_app app_id, job_id
-        unless app.add_hdfs_trace data, @import_mode
-          unhandled data
-        end
+        # app = get_create_app app_id, job_id
+        # unless app.add_hdfs_trace data, @import_mode
+        #   unhandled data
+        # end
       when 'attempt'
         # noinspection RubyScope
         app_attempt = get_create_attempt app_attempt_id, app_id, job_id
