@@ -93,7 +93,7 @@ class HadoopJob < HadoopBase
 
   def to_db
     if @initial_to_db
-      q = ["MERGE (job:job {id: '#{@id}' } ) set job.log_processed_at = coalesce(job.log_processed_at,'#{@log_processed_at}'), job.db_timestamp = coalesce(job.db_timestamp, timestamp()) "]
+      q = ["MERGE (job:job {id: '#{@id}' } ) set job.log_processed_at = TOINT(coalesce(job.log_processed_at,'#{@log_processed_at}')), job.db_timestamp = coalesce(TOINT(job.db_timestamp), timestamp()) "]
       @initial_to_db = false
     else
       q = ["MERGE (job:job {id: '#{@id}' } ) "]
