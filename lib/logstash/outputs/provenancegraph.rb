@@ -102,6 +102,7 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
         @logger.error('Error: DB is locked', :plugin => self)
         exit
       end
+      @requery = []
     end
     @logger.debug('finished initialisation', :plugin => self)
   end
