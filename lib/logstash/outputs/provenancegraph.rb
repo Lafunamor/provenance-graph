@@ -295,41 +295,58 @@ class LogStash::Outputs::ProvenanceGraph < LogStash::Outputs::Base
     }
   end
 
+  def query(query)
+    begin
+      Neo4j::Session.current.query(query)
+    rescue
+      begin
+        Neo4j::Session.current.query(query)
+      rescue
+        @requery += [query]
+      end
+    end
+  end
+
   def flush_to_db(jobs, apps, app_attempts, containers, blocks)
 
     blocks.each { |k, v|
       v.to_db.each { |query|
-        Neo4j::Session.current.query(query)
+        query(query)
       }
     }
     # Neo4j::Session.current.query(query)
     # query = ""
     containers.each { |k, v|
       v.to_db.each { |query|
-        Neo4j::Session.current.query(query)
+        query(query)
       }
     }
     # Neo4j::Session.current.query(query)
     # query = ""
     app_attempts.each { |k, v|
       v.to_db.each { |query|
-        Neo4j::Session.current.query(query)
+        query(query)
       }
     }
     # Neo4j::Session.current.query(query)
     # query = ""
     apps.each { |k, v|
       v.to_db.each { |query|
-        Neo4j::Session.current.query(query)
+        query(query)
       }
     }
     # Neo4j::Session.current.query(query)
     # query = ""
     jobs.each { |k, v|
       v.to_db.each { |query|
-        Neo4j::Session.current.query(query)
+        query(query)
       }
     }
+    unless @requery.empty? || @requery.nil?
+      @requery.each{|query|
+        query(query)
+      }
+    end
     # Neo4j::Session.current.query(query)
   end
 
