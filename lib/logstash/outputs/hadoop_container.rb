@@ -159,11 +159,11 @@ q = ["MERGE (container:container {id: '#{@id}'})"]
 
     @resource_usage.each {|timestamp, usage|
     query = "MERGE (a:container {id: '#{@id}'})
-    CREATE (res:resource_usage {ProcessTreeID: '#{usage[1]}',
-        UsedPysicalMemory: '#{usage[2]}',
-        AvailablePhysicalMemory: '#{usage[3]}',
-        UsedVirtualMemory: '#{usage[4]}',
-        AvailableVirtualMemory: '#{usage[5]}'
+    CREATE (res:resource_usage {ProcessTreeID: '#{usage[0]}',
+        UsedPysicalMemory: '#{usage[1]}',
+        AvailablePhysicalMemory: '#{usage[2]}',
+        UsedVirtualMemory: '#{usage[3]}',
+        AvailableVirtualMemory: '#{usage[4]}'
     })
 
     CREATE (a)-[:used {timestamp: '#{timestamp}'}]->(res);"
