@@ -1,19 +1,14 @@
-# Logstash Plugin
+# Provenance Graph - a Logstash Plugin
 
 This is a plugin for [Logstash](https://github.com/elastic/logstash).
 
 It is fully free and fully open source. The license is Apache 2.0, meaning you are pretty much free to use it however you want in whatever way.
 
-## Documentation
+This plugin is designed to process Apache Haddops log files. Logs should be shipped with Filebeat and parsed using the Grok plugin.
+The appropriate matching patterns for Grok are in 'GrokLines.txt'.
 
-Logstash provides infrastructure to automatically generate documentation for this plugin. We use the asciidoc format to write documentation so any comments in the source code will be first converted into asciidoc and then into html. All plugin documentation are placed under one [central location](http://www.elastic.co/guide/en/logstash/current/).
-
-- For formatting code or config example, you can use the asciidoc `[source,ruby]` directive
-- For more asciidoc formatting tips, see the excellent reference here https://github.com/elastic/docs#asciidoc-guide
-
-## Need Help?
-
-Need help? Try #logstash on freenode IRC or the https://discuss.elastic.co/c/logstash discussion forum.
+To import huge amounts of data, the integrated import mode can be used. In import mode, Provenance Graph will generate a set of CSV files in the output path.
+The queries to import the dataset from the CSV files into Neo4j are located in the subfolder './neo_import'.
 
 ## Developing
 
@@ -89,22 +84,10 @@ output{
 }
 ```
 
-### Parameters
-currently these parameters are supported:
-```
-path => "path for the file output"
-```
-Currently the path variable must end with a '/'
-
-
 
 
 ## Contributing
 
 All contributions are welcome: ideas, patches, documentation, bug reports, complaints, and even something you drew up on a napkin.
-
-Programming is not a required skill. Whatever you've seen about open source and maintainers or community members  saying "send patches or die" - you will not see that here.
-
-It is more important to the community that you are able to contribute.
 
 For more information about contributing, see the [CONTRIBUTING](https://github.com/elastic/logstash/blob/master/CONTRIBUTING.md) file.
